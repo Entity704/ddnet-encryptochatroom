@@ -24,6 +24,8 @@
 #include <game/client/gameclient.h>
 #include <game/localization.h>
 
+#include <sstream>
+
 char CChat::ms_aDisplayText[MAX_LINE_LENGTH] = "";
 
 CChat::CLine::CLine()
@@ -80,6 +82,9 @@ CChat::CChat()
 		}
 		return pStr;
 	});
+
+	for(int i = 0; i < 5; i++)
+		if(m_PrivChatRoom.GenrateX25519KeyPair()) break;
 }
 
 void CChat::RegisterCommand(const char *pName, const char *pParams, const char *pHelpText)
@@ -269,7 +274,170 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 			m_ServerCommandsNeedSorting = false;
 		}
 
-		SendChatQueued(m_Input.GetString());
+		std::string InputStr = m_Input.GetString();
+		if(InputStr[0] == ']')
+		{
+			std::string Cmd = InputStr.substr(1).substr(0, InputStr.substr(1).find(' '));
+
+			if(Cmd == "create")
+			{
+				m_PrivChatRoom.CreateNewRoom();
+				Echo(("Created new private chat room, room prefix: " + m_PrivChatRoom.GetRoomPrefix()).c_str());
+			}
+			else if(Cmd == "m")
+			{
+				if(InputStr.length() >= 4)
+				{
+					std::string Ciphertext = m_PrivChatRoom.EncodeMessage(InputStr.substr(3));
+					SendChatQueued(Ciphertext.c_str());
+				}
+				else
+				{
+					Echo("Missing message");
+				}
+			}
+			else if(Cmd == "rj")
+			{
+				if(InputStr.length() >= 5)
+				{
+					std::string param = InputStr.substr(4);
+					int TargetID;
+					if(std::stringstream(param) >> TargetID && TargetID >= 0 && TargetID < MAX_CLIENTS)
+					{
+						if(m_PrivChatRoom.m_X25519PublicKey.empty())
+						{
+							if(!m_PrivChatRoom.GenrateX25519KeyPair())
+							{
+								Echo("Failed to generate key pair for joining");
+							}
+							else
+							{
+								std::string request = m_PrivChatRoom.EncodeJoinRequest(TargetID);
+								if(request == "{eNo public key" || request.empty())
+								{
+									Echo("Missing public key");
+								}
+								else
+								{
+									SendChatQueued(request.c_str());
+									char buf[128];
+									str_format(buf, sizeof(buf), "Join request sent to client %d", TargetID);
+									Echo(buf);
+								}
+							}
+						}
+						else
+						{
+							std::string request = m_PrivChatRoom.EncodeJoinRequest(TargetID);
+							if(request == "{eNo public key" || request.empty())
+							{
+								Echo("Missing public key");
+							}
+							else
+							{
+								SendChatQueued(request.c_str());
+								char buf[128];
+								str_format(buf, sizeof(buf), "Join request sent to client %d", TargetID);
+								Echo(buf);
+							}
+						}
+					}
+					else
+					{
+						Echo("Invalid client ID");
+					}
+				}
+				else
+				{
+					Echo("Missing client ID");
+				}
+			}
+			else if(Cmd == "approve")
+			{
+				if(InputStr.length() >= 10)
+				{
+					std::string param = InputStr.substr(9);
+					int TargetID;
+					if(std::stringstream(param) >> TargetID && TargetID >= 0 && TargetID < MAX_CLIENTS)
+					{
+						std::string keyMsg = m_PrivChatRoom.EncodeKeyDistributionMessage(TargetID);
+						if(keyMsg == "{eInvalid room" || keyMsg == "{eNo such request" ||
+						keyMsg == "{eEncrypt failed")
+						{
+							Echo(("Cannot approve: " + keyMsg.substr(2)).c_str());
+						}
+						else if(keyMsg.empty())
+						{
+							Echo("Unknown error");
+						}
+						else
+						{
+							SendChatQueued(keyMsg.c_str());
+							char buf[128];
+							str_format(buf, sizeof(buf), "Approved client %d and sent room key", TargetID);
+							Echo(buf);
+						}
+					}
+					else
+					{
+						Echo("Invalid client ID");
+					}
+				}
+				else
+				{
+					Echo("Missing client ID");
+				}
+			}
+			else if(Cmd == "decline")
+			{
+				if(InputStr.length() >= 10)
+				{
+					std::string param = InputStr.substr(9);
+					int TargetID;
+					if(std::stringstream(param) >> TargetID && TargetID >= 0 && TargetID < MAX_CLIENTS)
+					{
+						auto it = m_PrivChatRoom.m_JoinRequests.find(TargetID);
+						if(it != m_PrivChatRoom.m_JoinRequests.end())
+						{
+							m_PrivChatRoom.m_JoinRequests.erase(it);
+							char buf[128];
+							str_format(buf, sizeof(buf), "Declined join request from client %d", TargetID);
+							Echo(buf);
+						}
+						else
+						{
+							Echo("No pending join request from that client");
+						}
+					}
+					else
+					{
+						Echo("Invalid client ID");
+					}
+				}
+				else
+				{
+					Echo("Missing client ID");
+				}
+			}
+			else if(Cmd == "help")
+			{
+				Echo("PCR command list:");
+				Echo("]create    - Create a new room");
+				Echo("]m r[message]    - Encrypt the message and send it");
+				Echo("]rj i[id]    - Request to join the chat room where someone is");
+				Echo("]approve i[id]    - Approve someone's request to join");
+				Echo("]decline i[id]    - Decline someone's request to join");
+				Echo("]help    - Show this help message");
+			}
+			else
+			{
+				Echo(("Unknown command: " + Cmd + ". Try use \"]help\" at first").c_str());
+			}
+		}
+		else
+		{
+			SendChatQueued(InputStr.c_str());
+		}
 		m_pHistoryEntry = nullptr;
 		DisableMode();
 		GameClient()->OnRelease();
@@ -566,6 +734,112 @@ void CChat::OnMessage(int MsgType, void *pRawMsg)
 			pMsg->m_ClientId == SERVER_MSG)
 		{
 			StoreSave(pMsg->m_pMessage);
+		}
+
+		if(Client()->State() != IClient::STATE_DEMOPLAYBACK && pMsg->m_pMessage[0] == '{')
+		{
+			std::string Msg = pMsg->m_pMessage;
+			int SenderID = pMsg->m_ClientId;
+			int MyID = GameClient()->m_Snap.m_LocalClientId;
+
+			auto SafeStoi = [](const std::string& s, int& out) -> bool {
+				if(s.empty()) return false;
+				char* endptr;
+				long val = strtol(s.c_str(), &endptr, 10);
+				if(*endptr != '\0' || val < 0 || val > MAX_CLIENTS) return false;
+				out = static_cast<int>(val);
+				return true;
+			};
+
+			if(Msg.find('m') == 1)
+			{
+				if(Msg.find(m_PrivChatRoom.GetRoomPrefix()) == 2)
+				{
+					std::string Plaintext = m_PrivChatRoom.DecodeMessage(Msg);
+					if(Plaintext.find("{e") == 0)
+					{
+						Echo(Plaintext.substr(2).c_str());
+					}
+					else
+					{
+						CLine CurrentLine = m_aLines[m_CurrentLine];
+						std::string OutMsg = std::string("[Decoded] ") + CurrentLine.m_aName + ": " + Plaintext;
+						Echo(OutMsg.c_str());
+					}
+				}
+			}
+			else if(Msg.find('j') == 1)
+			{
+				if(!m_PrivChatRoom.IsValidRoom())
+				{
+					;
+				}
+				else
+				{
+					size_t pos = 2;
+					std::string idStr;
+					while(pos < Msg.size() && isdigit(static_cast<unsigned char>(Msg[pos])))
+						idStr += Msg[pos++];
+					int targetID = -1;
+					if(SafeStoi(idStr, targetID) && targetID == MyID)
+					{
+						std::string encodedPub = Msg.substr(pos);
+						std::vector<uint8_t> pubkey = Base32768::Decode(encodedPub);
+						if(pubkey.size() == 32)
+						{
+							m_PrivChatRoom.m_JoinRequests[SenderID] = pubkey;
+							char buf[256];
+							str_format(buf, sizeof(buf), "Received join request from client %d. Use ]approve %d or ]decline %d", SenderID, SenderID, SenderID);
+							Echo(buf);
+						}
+						else
+						{
+							Echo("Invalid public key in join request");
+						}
+					}
+				}
+			}
+			else if(Msg.find('k') == 1)
+			{
+				size_t pos = 2;
+				std::string idStr;
+				while(pos < Msg.size() && isdigit(static_cast<unsigned char>(Msg[pos])))
+					idStr += Msg[pos++];
+				int targetID = -1;
+				if(SafeStoi(idStr, targetID) && targetID == MyID)
+				{
+					std::string encodedCipher = Msg.substr(pos);
+					if(!encodedCipher.empty())
+					{
+						std::vector<uint8_t> Ciphertext = Base32768::Decode(encodedCipher);
+						if(!Ciphertext.empty())
+						{
+							if(!m_PrivChatRoom.m_X25519PrivateKey.empty())
+							{
+								std::vector<uint8_t> AESKey;
+								if(CryptoUtils::X25519_Decrypt(m_PrivChatRoom.m_X25519PrivateKey, Ciphertext, AESKey))
+								{
+									m_PrivChatRoom.m_AESKey = AESKey;
+									m_PrivChatRoom.m_JoinRequests.clear();
+									Echo("Successfully joined the private chat room!");
+								}
+								else
+								{
+									Echo("Failed to decrypt room key");
+								}
+							}
+							else
+							{
+								Echo("No private key available to decrypt room key");
+							}
+						}
+						else
+						{
+							Echo("Failed to decode key distribution message");
+						}
+					}
+				}
+			}
 		}
 	}
 	else if(MsgType == NETMSGTYPE_SV_COMMANDINFO)

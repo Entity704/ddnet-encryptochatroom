@@ -3,6 +3,16 @@
 
 #include <cstddef> // size_t
 
+#ifdef SHA256_DIGEST_LENGTH
+#undef SHA256_DIGEST_LENGTH
+#endif
+#ifdef SHA1_DIGEST_LENGTH
+#undef SHA1_DIGEST_LENGTH
+#endif
+#ifdef MD5_DIGEST_LENGTH
+#undef MD5_DIGEST_LENGTH
+#endif
+
 enum
 {
 	SHA256_DIGEST_LENGTH = 256 / 8,

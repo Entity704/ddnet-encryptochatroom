@@ -4,6 +4,7 @@
 #define GAME_CLIENT_COMPONENTS_CHAT_H
 
 #include <base/str.h>
+#include <base/pcr_crypto.h>
 
 #include <engine/console.h>
 #include <engine/shared/config.h>
@@ -17,6 +18,7 @@
 #include <game/client/render.h>
 
 #include <vector>
+#include <map>
 
 constexpr auto SAVES_FILE = "ddnet-saves.txt";
 
@@ -145,6 +147,159 @@ class CChat : public CComponent
 	bool m_EditingNewLine;
 
 	bool m_ServerSupportsCommandInfo;
+
+	class CPrivateChatRoom
+	{
+	public:
+		std::vector<uint8_t> m_X25519PrivateKey;
+		std::vector<uint8_t> m_X25519PublicKey;
+		std::vector<uint8_t> m_AESKey;
+		std::map<int, std::vector<uint8_t>> m_JoinRequests;
+		int m_RequestObjectID = -1;
+
+		bool GenrateX25519KeyPair()
+		{
+			m_X25519PrivateKey.clear();
+			m_X25519PublicKey.clear();
+			return CryptoUtils::GenerateX25519KeyPair(m_X25519PrivateKey, m_X25519PublicKey);
+		}
+
+		bool IsValidRoom() const { return !m_AESKey.empty(); }
+
+		const std::string& GetRoomPrefix()
+		{
+			if(!IsValidRoom()) return EmptyPrefix;
+			if(m_CachedPrefix.empty())
+			{
+				uint8_t Hash[32];
+				SHA256(m_AESKey.data(), m_AESKey.size(), Hash);
+				std::vector<uint8_t> Prefix(Hash, Hash + 3);
+				m_CachedPrefix = Base32768::Encode(Prefix);
+			}
+			return m_CachedPrefix;
+		}
+
+		void CreateNewRoom()
+		{
+			QuitRoom();
+			m_RequestObjectID = -1;
+			CryptoUtils::GenerateAESKey(m_AESKey);
+		}
+
+		void QuitRoom()
+		{
+			m_AESKey.clear();
+			m_JoinRequests.clear();
+			m_CachedPrefix.clear();
+		}
+
+		std::string EncodeMessage(const std::string &Message)
+		{
+			if (!IsValidRoom()) return "{eInvalid room";
+
+			std::string truncated;
+			if (Message.size() > 121) {
+				size_t pos = 0;
+				size_t remaining = 121;
+				while (pos < Message.size() && remaining > 0) {
+					unsigned char c = static_cast<unsigned char>(Message[pos]);
+					size_t char_len = 1;
+					if (c >= 0x80) {
+						if ((c & 0xE0) == 0xC0) char_len = 2;
+						else if ((c & 0xF0) == 0xE0) char_len = 3;
+						else if ((c & 0xF8) == 0xF0) char_len = 4;
+					}
+					if (remaining < char_len) break;
+					remaining -= char_len;
+					pos += char_len;
+				}
+				truncated = Message.substr(0, pos);
+			} else {
+				truncated = Message;
+			}
+
+			std::vector<uint8_t> CipherRaw;
+			if (!CryptoUtils::AES_Encrypt(
+					m_AESKey,
+					std::vector<uint8_t>(truncated.begin(), truncated.end()),
+					CipherRaw))
+				return "{eEncode failed";
+
+			std::string encoded = Base32768::Encode(CipherRaw);
+			std::string result = "{m" + GetRoomPrefix() + encoded;
+			return result;
+		}
+
+		std::string DecodeMessage(const std::string &RawChat)
+		{
+			if (!IsValidRoom()) return "{eInvalid room";
+			std::string encoded = RawChat.substr(11);
+			std::vector<uint8_t> Ciphertext = Base32768::Decode(encoded);
+			if (Ciphertext.empty()) return "{eEmpty message";
+			std::vector<uint8_t> PlainRaw;
+			if (!CryptoUtils::AES_Decrypt(m_AESKey, Ciphertext, PlainRaw))
+				return "{eDecode failed";
+			return std::string(PlainRaw.begin(), PlainRaw.end());
+		}
+
+		std::string EncodeJoinRequest(int ClientID)
+		{
+			if (m_X25519PublicKey.size() != 32)
+				return "{eNo public key";
+
+			std::string cidStr = std::to_string(ClientID);
+			std::string encodedPub = Base32768::Encode(m_X25519PublicKey);
+			return "{j" + cidStr + encodedPub;
+		}
+
+		std::string EncodeKeyDistributionMessage(int TargetClientID)
+		{
+			if(!IsValidRoom())
+				return "{eInvalid room";
+
+			auto it = m_JoinRequests.find(TargetClientID);
+			if(it == m_JoinRequests.end())
+				return "{eNo such request";
+
+			const std::vector<uint8_t>& peerPub = it->second;
+			std::vector<uint8_t> cipher;
+			if(!CryptoUtils::X25519_Encrypt(peerPub, m_AESKey, cipher))
+				return "{eEncrypt failed";
+
+			std::string encodedCipher = Base32768::Encode(cipher);
+			std::string cidStr = std::to_string(TargetClientID);
+
+			m_JoinRequests.erase(it);
+			return "{k" + cidStr + encodedCipher;
+		}
+
+		void DecodeJoinRequest(const std::string& Message)
+		{
+			if (Message.size() < 3 || Message[0] != '{' || Message[1] != 'j')
+				return;
+
+			size_t pos = 2;
+			std::string cidStr;
+			while (pos < Message.size() && isdigit(static_cast<unsigned char>(Message[pos])))
+				cidStr += Message[pos++];
+
+			if (cidStr.empty())
+				return;
+
+			int clientID = std::stoi(cidStr);
+			std::string encodedPub = Message.substr(pos);
+			std::vector<uint8_t> pubkey = Base32768::Decode(encodedPub);
+			if (pubkey.size() != 32)
+				return;
+
+			m_JoinRequests[clientID] = pubkey;
+		}
+
+	private:
+		std::string m_CachedPrefix;
+		static inline const std::string EmptyPrefix;
+	};
+	CPrivateChatRoom m_PrivChatRoom;
 
 	static void ConSay(IConsole::IResult *pResult, void *pUserData);
 	static void ConSayTeam(IConsole::IResult *pResult, void *pUserData);
