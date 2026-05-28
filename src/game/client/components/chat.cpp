@@ -298,7 +298,7 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 				if(InputStr.length() >= 4)
 				{
 					std::string Ciphertext = m_PrivChatRoom.EncodeMessage(InputStr.substr(3));
-					if(Ciphertext.find("{e"))
+					if(!(Ciphertext.find("{e") == 0)) // 为了可读性，，
 						SendChatQueued(Ciphertext.c_str());
 					else
 						Echo(Ciphertext.substr(2).c_str());

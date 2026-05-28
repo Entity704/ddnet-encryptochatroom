@@ -172,7 +172,7 @@ class CChat : public CComponent
 			if(m_CachedPrefix.empty())
 			{
 				uint8_t Hash[32];
-				SHA256(m_AESKey.data(), m_AESKey.size(), Hash);
+				CryptoUtils::CU_SHA256(m_AESKey.data(), m_AESKey.size(), Hash);
 				std::vector<uint8_t> Prefix(Hash, Hash + 3);
 				m_CachedPrefix = Base32768::Encode(Prefix);
 			}
