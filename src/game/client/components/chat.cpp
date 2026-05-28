@@ -308,7 +308,7 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 					Echo("Missing message");
 				}
 			}
-			else if(Cmd == "rj")
+			else if(Cmd == "rj" || Cmd == "jr")
 			{
 				if(InputStr.length() >= 5)
 				{
@@ -431,15 +431,24 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 					Echo("Missing client ID");
 				}
 			}
+			else if(Cmd == "cjr")
+			{
+				m_PrivChatRoom.m_RequestObjectID = -1;
+				char buf[64];
+				str_format(buf, sizeof(buf), "{c%d", GameClient()->m_Snap.m_LocalClientId);
+				SendChatQueued(buf);
+				Echo("Join request canceled");
+			}
 			else if(Cmd == "help")
 			{
 				Echo("PCR command list:");
 				Echo("]create    - Create a new room");
 				Echo("]quit|exit    - Exit the current room");
 				Echo("]m r[message]    - Encrypt the message and send it");
-				Echo("]rj i[id]    - Request to join the chat room where someone is");
+				Echo("]rj|jr i[id]    - Request to join the chat room where someone is");
 				Echo("]approve i[id]    - Approve someone's request to join");
 				Echo("]decline i[id]    - Decline someone's request to join");
+				Echo("]cjr       - Cancel your join request");
 				Echo("]help    - Show this help message");
 			}
 			else
@@ -752,6 +761,7 @@ void CChat::OnMessage(int MsgType, void *pRawMsg)
 		if(Client()->State() != IClient::STATE_DEMOPLAYBACK && pMsg->m_pMessage[0] == '{')
 		{
 			std::string Msg = pMsg->m_pMessage;
+			CLine CurrentLine = m_aLines[m_CurrentLine];
 			int SenderID = pMsg->m_ClientId;
 			int MyID = GameClient()->m_Snap.m_LocalClientId;
 
@@ -775,7 +785,6 @@ void CChat::OnMessage(int MsgType, void *pRawMsg)
 					}
 					else
 					{
-						CLine CurrentLine = m_aLines[m_CurrentLine];
 						std::string OutMsg = std::string("[Decoded] ") + CurrentLine.m_aName + ": " + Plaintext;
 						Echo(OutMsg.c_str());
 					}
@@ -798,7 +807,7 @@ void CChat::OnMessage(int MsgType, void *pRawMsg)
 						{
 							m_PrivChatRoom.m_JoinRequests[SenderID] = pubkey;
 							char buf[256];
-							str_format(buf, sizeof(buf), "Received join request from client %d. Use ]approve %d or ]decline %d", SenderID, SenderID, SenderID);
+							str_format(buf, sizeof(buf), "Received join request from client %d: %s. Use ]approve %d or ]decline %d", SenderID, CurrentLine.m_aName, SenderID, SenderID);
 							Echo(buf);
 						}
 						else
@@ -854,6 +863,25 @@ void CChat::OnMessage(int MsgType, void *pRawMsg)
 						{
 							Echo("Failed to decode key distribution message");
 						}
+					}
+				}
+			}
+			else if(Msg.find('c') == 1)
+			{
+				size_t pos = 2;
+				std::string idStr;
+				while(pos < Msg.size() && isdigit(static_cast<unsigned char>(Msg[pos])))
+					idStr += Msg[pos++];
+				int cancelID = -1;
+				if(SafeStoi(idStr, cancelID) && cancelID == MyID)
+				{
+					auto it = m_PrivChatRoom.m_JoinRequests.find(SenderID);
+					if(it != m_PrivChatRoom.m_JoinRequests.end())
+					{
+						m_PrivChatRoom.m_JoinRequests.erase(it);
+						char buf[256];
+						str_format(buf, sizeof(buf), "%d: %s canceled the join request", SenderID, CurrentLine.m_aName);
+						Echo(buf);
 					}
 				}
 			}

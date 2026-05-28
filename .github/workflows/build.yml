@@ -36,7 +36,7 @@ jobs:
           package-file: "*-macos.dmg"
         - name: windows-latest
           os: windows-latest
-          cmake-args: -A x64 -DEXCEPTION_HANDLING=ON -DVULKAN=ON -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows
+          cmake-args: -A x64 -DEXCEPTION_HANDLING=ON -DVULKAN=ON
           cmake-init-env: CXXFLAGS=/WX LDFLAGS=/WX
           package-file: "*-win64.zip"
           executable-suffix: .exe
@@ -153,7 +153,8 @@ jobs:
 
     - name: Build in debug mode
       env:
-        VCPKG_ROOT: ${{ env.VCPKG_ROOT }}
+        CMAKE_TOOLCHAIN_FILE: C:/vcpkg/scripts/buildsystems/vcpkg.cmake
+        VCPKG_TARGET_TRIPLET: x64-windows
       run: |
         mkdir debug
         cd debug
