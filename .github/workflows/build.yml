@@ -117,6 +117,7 @@ jobs:
         rustup default stable-x86_64-pc-windows-gnu
         rustup set default-host x86_64-pc-windows-gnu
         C:\msys64\usr\bin\bash.exe -lc "pacman -S --noconfirm mingw-w64-x86_64-openssl"
+        echo "CMAKE_PREFIX_PATH=C:/msys64/mingw64" >> $GITHUB_ENV
 
     - name: Install OpenSSL (Windows MSVC)
       if: matrix.name == 'windows-latest'
