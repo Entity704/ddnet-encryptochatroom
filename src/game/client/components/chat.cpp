@@ -284,12 +284,20 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 				m_PrivChatRoom.CreateNewRoom();
 				Echo(("Created new private chat room, room prefix: " + m_PrivChatRoom.GetRoomPrefix()).c_str());
 			}
+			if(Cmd == "quit" || Cmd == "exit")
+			{
+				m_PrivChatRoom.QuitRoom();
+				Echo("Exited the current room");
+			}
 			else if(Cmd == "m")
 			{
 				if(InputStr.length() >= 4)
 				{
 					std::string Ciphertext = m_PrivChatRoom.EncodeMessage(InputStr.substr(3));
-					SendChatQueued(Ciphertext.c_str());
+					if(!Ciphertext.find("{e"))
+						SendChatQueued(Ciphertext.c_str());
+					else
+						Echo(Ciphertext.substr(2).c_str());
 				}
 				else
 				{
@@ -423,6 +431,8 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 			{
 				Echo("PCR command list:");
 				Echo("]create    - Create a new room");
+				Echo("]quit    - Exit the current room");
+				Echo("]exit    - Exit the current room");
 				Echo("]m r[message]    - Encrypt the message and send it");
 				Echo("]rj i[id]    - Request to join the chat room where someone is");
 				Echo("]approve i[id]    - Approve someone's request to join");
