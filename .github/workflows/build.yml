@@ -36,7 +36,7 @@ jobs:
           package-file: "*-macos.dmg"
         - name: windows-latest
           os: windows-latest
-          cmake-args: -A x64 -DEXCEPTION_HANDLING=ON -DVULKAN=ON
+          cmake-args: -A x64 -DEXCEPTION_HANDLING=ON -DVULKAN=ON -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake
           cmake-init-env: CXXFLAGS=/WX LDFLAGS=/WX
           package-file: "*-win64.zip"
           executable-suffix: .exe
@@ -117,9 +117,12 @@ jobs:
         rustup default stable-x86_64-pc-windows-gnu
         rustup set default-host x86_64-pc-windows-gnu
 
-    - name: Install OpenSSL on Windows
-      if: contains(matrix.os, 'windows')
-      run: choco install openssl -y
+    - name: Install OpenSSL using vcpkg
+      if: runner.os == 'Windows'
+      run: |
+        vcpkg install openssl:x64-windows
+        echo "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" | Out-File -FilePath $env:GITHUB_ENV -Append
+        echo "$env:VCPKG_INSTALLATION_ROOT\installed\x64-windows\bin" | Out-File -FilePath $env:GITHUB_PATH -Append
 
     - name: Install Vulkan SDK
       uses: humbletim/install-vulkan-sdk@v1.2
