@@ -284,8 +284,12 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 				m_PrivChatRoom.CreateNewRoom();
 				Echo(("Created new private chat room, room prefix: " + m_PrivChatRoom.GetRoomPrefix()).c_str());
 			}
-			if(Cmd == "quit" || Cmd == "exit")
+			else if(Cmd == "quit" || Cmd == "exit")
 			{
+				if(!m_PrivChatRoom.IsValidRoom())
+				{
+					Echo("It seems you are already exited the room");
+				}
 				m_PrivChatRoom.QuitRoom();
 				Echo("Exited the current room");
 			}
@@ -294,7 +298,7 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 				if(InputStr.length() >= 4)
 				{
 					std::string Ciphertext = m_PrivChatRoom.EncodeMessage(InputStr.substr(3));
-					if(!Ciphertext.find("{e"))
+					if(Ciphertext.find("{e"))
 						SendChatQueued(Ciphertext.c_str());
 					else
 						Echo(Ciphertext.substr(2).c_str());
@@ -321,9 +325,9 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 							else
 							{
 								std::string request = m_PrivChatRoom.EncodeJoinRequest(TargetID);
-								if(request == "{eNo public key" || request.empty())
+								if(request.find("{e") == 0 || request.empty())
 								{
-									Echo("Missing public key");
+									Echo(request.empty() ? "Missing public key" : request.substr(2).c_str());
 								}
 								else
 								{
@@ -337,9 +341,9 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 						else
 						{
 							std::string request = m_PrivChatRoom.EncodeJoinRequest(TargetID);
-							if(request == "{eNo public key" || request.empty())
+							if(request.find("{e") == 0 || request.empty())
 							{
-								Echo("Missing public key");
+								Echo(request.empty() ? "Missing public key" : request.substr(2).c_str());
 							}
 							else
 							{
@@ -431,8 +435,7 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 			{
 				Echo("PCR command list:");
 				Echo("]create    - Create a new room");
-				Echo("]quit    - Exit the current room");
-				Echo("]exit    - Exit the current room");
+				Echo("]quit|exit    - Exit the current room");
 				Echo("]m r[message]    - Encrypt the message and send it");
 				Echo("]rj i[id]    - Request to join the chat room where someone is");
 				Echo("]approve i[id]    - Approve someone's request to join");
@@ -780,11 +783,7 @@ void CChat::OnMessage(int MsgType, void *pRawMsg)
 			}
 			else if(Msg.find('j') == 1)
 			{
-				if(!m_PrivChatRoom.IsValidRoom())
-				{
-					;
-				}
-				else
+				if(m_PrivChatRoom.IsValidRoom())
 				{
 					size_t pos = 2;
 					std::string idStr;
@@ -826,16 +825,24 @@ void CChat::OnMessage(int MsgType, void *pRawMsg)
 						{
 							if(!m_PrivChatRoom.m_X25519PrivateKey.empty())
 							{
-								std::vector<uint8_t> AESKey;
-								if(CryptoUtils::X25519_Decrypt(m_PrivChatRoom.m_X25519PrivateKey, Ciphertext, AESKey))
+								if(SenderID != m_PrivChatRoom.m_RequestObjectID)
 								{
-									m_PrivChatRoom.m_AESKey = AESKey;
-									m_PrivChatRoom.m_JoinRequests.clear();
-									Echo("Successfully joined the private chat room!");
+									Echo("Received room key from unexpected client");
 								}
 								else
 								{
-									Echo("Failed to decrypt room key");
+									std::vector<uint8_t> AESKey;
+									if(CryptoUtils::X25519_Decrypt(m_PrivChatRoom.m_X25519PrivateKey, Ciphertext, AESKey))
+									{
+										m_PrivChatRoom.m_AESKey = AESKey;
+										m_PrivChatRoom.m_JoinRequests.clear();
+										m_PrivChatRoom.m_RequestObjectID = -1;
+										Echo("Successfully joined the private chat room!");
+									}
+									else
+									{
+										Echo("Failed to decrypt room key");
+									}
 								}
 							}
 							else
