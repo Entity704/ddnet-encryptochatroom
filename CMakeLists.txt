@@ -2107,7 +2107,6 @@ set_src(BASE GLOB_RECURSE src/base
   hash_ctxt.h
   hash_libtomcrypt.cpp
   hash_openssl.cpp
-  pcr_crypto.cpp
   io.cpp
   io.h
   lock.h
@@ -2121,6 +2120,8 @@ set_src(BASE GLOB_RECURSE src/base
   net.h
   os.cpp
   os.h
+  pcr_crypto.cpp
+  pcr_crypto.h
   process.cpp
   process.h
   rust.h
