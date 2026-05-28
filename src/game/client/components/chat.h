@@ -244,9 +244,16 @@ class CChat : public CComponent
 
 		std::string EncodeJoinRequest(int ClientID)
 		{
+			if (ClientID < 0 || ClientID >= MAX_CLIENTS)
+				return "{eInvalid client ID";
+
 			if (m_X25519PublicKey.size() != 32)
 				return "{eNo public key";
 
+			if (m_RequestObjectID != -1 && m_RequestObjectID != ClientID)
+				return "{ePending join request exists";
+
+			m_RequestObjectID = ClientID;
 			std::string cidStr = std::to_string(ClientID);
 			std::string encodedPub = Base32768::Encode(m_X25519PublicKey);
 			return "{j" + cidStr + encodedPub;
