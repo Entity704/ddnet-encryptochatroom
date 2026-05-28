@@ -42,7 +42,7 @@ jobs:
           executable-suffix: .exe
         - name: windows-latest-mingw
           os: windows-latest
-          cmake-args: -G Ninja -DCMAKE_SYSTEM_NAME=Windows -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -DEXCEPTION_HANDLING=ON -DCMAKE_RC_COMPILER=windres -DCMAKE_AR=ar -DVULKAN=ON -DCMAKE_PREFIX_PATH=C:/msys64/mingw64
+          cmake-args: -G Ninja -DCMAKE_SYSTEM_NAME=Windows -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -DEXCEPTION_HANDLING=ON -DCMAKE_RC_COMPILER=windres -DCMAKE_AR=ar -DVULKAN=ON -DCMAKE_PREFIX_PATH=C:/vcpkg/installed/x64-mingw-dynamic
           cmake-init-env: CXXFLAGS=-Wno-error LDFLAGS=-Wno-error
           package-file: "*-win64.zip"
           executable-suffix: .exe
@@ -116,7 +116,7 @@ jobs:
         rustup target add x86_64-pc-windows-gnu
         rustup default stable-x86_64-pc-windows-gnu
         rustup set default-host x86_64-pc-windows-gnu
-        C:\msys64\usr\bin\bash.exe -lc "pacman -S --noconfirm mingw-w64-x86_64-openssl"
+        vcpkg install openssl:x64-mingw-dynamic
 
     - name: Install OpenSSL (Windows MSVC)
       if: matrix.name == 'windows-latest'
