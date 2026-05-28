@@ -117,6 +117,10 @@ jobs:
         rustup default stable-x86_64-pc-windows-gnu
         rustup set default-host x86_64-pc-windows-gnu
 
+    - name: Install OpenSSL on Windows
+      if: contains(matrix.os, 'windows')
+      run: choco install openssl -y
+
     - name: Install Vulkan SDK
       uses: humbletim/install-vulkan-sdk@v1.2
       with:
