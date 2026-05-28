@@ -1,3 +1,12 @@
+if(WIN32)
+  if(MSVC)
+    set(OPENSSL_ROOT_DIR "C:/vcpkg/installed/x64-windows")
+  else()
+    set(OPENSSL_ROOT_DIR "C:/vcpkg/installed/x64-mingw-dynamic")
+  endif()
+  set(OPENSSL_USE_STATIC_LIBS FALSE)
+endif()
+
 if(NOT PREFER_BUNDLED_LIBS)
   find_package(OpenSSL)
   if(OPENSSL_FOUND)
