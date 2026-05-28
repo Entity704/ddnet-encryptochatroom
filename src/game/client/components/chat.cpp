@@ -364,6 +364,14 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 					Echo("Missing client ID");
 				}
 			}
+			else if(Cmd == "cjr")
+			{
+				m_PrivChatRoom.m_RequestObjectID = -1;
+				char buf[64];
+				str_format(buf, sizeof(buf), "{c%d", GameClient()->m_Snap.m_LocalClientId);
+				SendChatQueued(buf);
+				Echo("Join request canceled");
+			}
 			else if(Cmd == "approve")
 			{
 				if(InputStr.length() >= 10)
@@ -431,14 +439,6 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 					Echo("Missing client ID");
 				}
 			}
-			else if(Cmd == "cjr")
-			{
-				m_PrivChatRoom.m_RequestObjectID = -1;
-				char buf[64];
-				str_format(buf, sizeof(buf), "{c%d", GameClient()->m_Snap.m_LocalClientId);
-				SendChatQueued(buf);
-				Echo("Join request canceled");
-			}
 			else if(Cmd == "help")
 			{
 				Echo("PCR command list:");
@@ -446,9 +446,9 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 				Echo("]quit|exit    - Exit the current room");
 				Echo("]m r[message]    - Encrypt the message and send it");
 				Echo("]rj|jr i[id]    - Request to join the chat room where someone is");
+				Echo("]cjr    - Cancel your join request");
 				Echo("]approve i[id]    - Approve someone's request to join");
 				Echo("]decline i[id]    - Decline someone's request to join");
-				Echo("]cjr       - Cancel your join request");
 				Echo("]help    - Show this help message");
 			}
 			else

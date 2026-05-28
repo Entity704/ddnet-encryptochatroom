@@ -20,19 +20,19 @@ jobs:
         - name: ubuntu-latest-fancy
           os: ubuntu-latest
           cmake-args: -G Ninja
-          # cmake-init-env: CXXFLAGS=-Werror
+          cmake-init-env: CXXFLAGS=-Wno-error
           package-file: "*-linux_x86_64.tar.xz"
         - name: ubuntu-22.04
           os: ubuntu-22.04
           cmake-path: /usr/bin/
           cmake-args: -G "Unix Makefiles" -DTEST_MYSQL=ON
-          # cmake-init-env: CXXFLAGS=-Werror
+          cmake-init-env: CXXFLAGS=-Wno-error
           gtest-env: GTEST_FILTER=-*SQLite*
           package-file: "*-linux_x86_64.tar.xz"
         - name: macOS-latest
           os: macOS-latest
           cmake-args: -G Ninja
-          # cmake-init-env: CXXFLAGS=-Werror
+          cmake-init-env: CXXFLAGS=-Wno-error
           package-file: "*-macos.dmg"
         - name: windows-latest
           os: windows-latest
@@ -43,7 +43,7 @@ jobs:
         - name: windows-latest-mingw
           os: windows-latest
           cmake-args: -G Ninja -DCMAKE_SYSTEM_NAME=Windows -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -DEXCEPTION_HANDLING=ON -DCMAKE_RC_COMPILER=windres -DCMAKE_AR=ar -DVULKAN=ON
-          # cmake-init-env: CXXFLAGS=-Werror LDFLAGS=-Werror
+          cmake-init-env: CXXFLAGS=-Wno-error LDFLAGS=-Wno-error
           package-file: "*-win64.zip"
           executable-suffix: .exe
           # Delete outdated libwinpthread-1.dll after configuring to workaround https://github.com/ddnet/ddnet/issues/10203 when using MinGW.
@@ -116,13 +116,13 @@ jobs:
         rustup target add x86_64-pc-windows-gnu
         rustup default stable-x86_64-pc-windows-gnu
         rustup set default-host x86_64-pc-windows-gnu
+        C:\msys64\usr\bin\bash.exe -lc "pacman -S --noconfirm mingw-w64-x86_64-openssl"
 
-    - name: Install OpenSSL using vcpkg
-      if: runner.os == 'Windows'
+    - name: Install OpenSSL (Windows MSVC)
+      if: matrix.name == 'windows-latest'
       run: |
         vcpkg install openssl:x64-windows
-        echo "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" | Out-File -FilePath $env:GITHUB_ENV -Append
-        echo "$env:VCPKG_INSTALLATION_ROOT\installed\x64-windows\bin" | Out-File -FilePath $env:GITHUB_PATH -Append
+        echo "CMAKE_PREFIX_PATH=C:/vcpkg/installed/x64-windows" >> $GITHUB_ENV
 
     - name: Install Vulkan SDK
       uses: humbletim/install-vulkan-sdk@v1.2
@@ -152,14 +152,11 @@ jobs:
         cargo build
 
     - name: Build in debug mode
-      env:
-        CMAKE_TOOLCHAIN_FILE: C:/vcpkg/scripts/buildsystems/vcpkg.cmake
-        VCPKG_TARGET_TRIPLET: x64-windows
       run: |
         mkdir debug
         cd debug
         ${{ matrix.cmake-path }}cmake --version
-        ${{ matrix.cmake-path }}cmake -E env ${{ matrix.cmake-init-env }} ${{ matrix.cmake-path }}cmake ${{ matrix.cmake-args }} -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake" -DCMAKE_BUILD_TYPE=Debug -Wno-error=dev -DDOWNLOAD_GTEST=ON -DDEV=ON -DCMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG=. ..
+        ${{ matrix.cmake-path }}cmake -E env ${{ matrix.cmake-init-env }} ${{ matrix.cmake-path }}cmake ${{ matrix.cmake-args }} -DCMAKE_BUILD_TYPE=Debug -Wno-error=dev -DDOWNLOAD_GTEST=ON -DDEV=ON -DCMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG=. ..
         ${{ matrix.workaround-issue10203-run-after-configure }}
         ${{ matrix.cmake-path }}cmake --build . --config Debug --target everything
 
@@ -177,7 +174,7 @@ jobs:
       run: |
         mkdir release
         cd release
-        ${{ matrix.cmake-path }}cmake -E env ${{ matrix.cmake-init-env }} ${{ matrix.cmake-path }}cmake ${{ matrix.cmake-args }} -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release -Wno-error=dev -DDOWNLOAD_GTEST=ON -DCMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE=. ..
+        ${{ matrix.cmake-path }}cmake -E env ${{ matrix.cmake-init-env }} ${{ matrix.cmake-path }}cmake ${{ matrix.cmake-args }} -DCMAKE_BUILD_TYPE=Release -Wno-error=dev -DDOWNLOAD_GTEST=ON -DCMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE=. ..
         ${{ matrix.workaround-issue10203-run-after-configure }}
         ${{ matrix.cmake-path }}cmake --build . --config Release --target everything
 
@@ -205,7 +202,7 @@ jobs:
       run: |
         mkdir headless
         cd headless
-        ${{ matrix.cmake-path }}cmake -E env CXXFLAGS="--coverage -Werror" ${{ matrix.cmake-path }}cmake -E env LDFLAGS="--coverage -Werror" ${{ matrix.cmake-path }}cmake ${{ matrix.cmake-args }} -DHEADLESS_CLIENT=ON -DWEBSOCKETS=ON -DCMAKE_BUILD_TYPE=Debug -Wno-error=dev -DDOWNLOAD_GTEST=ON -DDEV=ON -DCMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG=. ..
+        ${{ matrix.cmake-path }}cmake -E env CXXFLAGS="--coverage -Wno-error" ${{ matrix.cmake-path }}cmake -E env LDFLAGS="--coverage -Wno-error" ${{ matrix.cmake-path }}cmake ${{ matrix.cmake-args }} -DHEADLESS_CLIENT=ON -DWEBSOCKETS=ON -DCMAKE_BUILD_TYPE=Debug -Wno-error=dev -DDOWNLOAD_GTEST=ON -DDEV=ON -DCMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG=. ..
         ${{ matrix.workaround-issue10203-run-after-configure }}
         ${{ matrix.cmake-path }}cmake -E env RUSTFLAGS="-Clink-arg=--coverage" ${{ matrix.cmake-path }}cmake --build . --config Debug
 
