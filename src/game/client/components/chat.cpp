@@ -84,7 +84,8 @@ CChat::CChat()
 	});
 
 	for(int i = 0; i < 5; i++)
-		if(m_PrivChatRoom.GenerateX25519KeyPair()) break;
+		if (m_PrivChatRoom.GenerateX25519KeyPair())
+			break;
 }
 
 void CChat::RegisterCommand(const char *pName, const char *pParams, const char *pHelpText)
@@ -381,8 +382,8 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 					if(std::stringstream(param) >> TargetID && TargetID >= 0 && TargetID < MAX_CLIENTS)
 					{
 						std::string keyMsg = m_PrivChatRoom.EncodeKeyDistributionMessage(TargetID);
-						if(keyMsg == "{eInvalid room" || keyMsg == "{eNo such request" ||
-						keyMsg == "{eEncrypt failed")
+						if (keyMsg == "{eInvalid room" || keyMsg == "{eNo such request" ||
+							keyMsg == "{eEncrypt failed")
 						{
 							Echo(("Cannot approve: " + keyMsg.substr(2)).c_str());
 						}
@@ -765,11 +766,12 @@ void CChat::OnMessage(int MsgType, void *pRawMsg)
 			int SenderID = pMsg->m_ClientId;
 			int MyID = GameClient()->m_Snap.m_LocalClientId;
 
-			auto SafeStoi = [](const std::string& s, int& out) -> bool {
-				if(s.empty()) return false;
-				char* endptr;
+			auto SafeStoi = [](const std::string &s, int &out) -> bool {
+				if (s.empty()) return false;
+				char *endptr;
 				long val = strtol(s.c_str(), &endptr, 10);
-				if(*endptr != '\0' || val < 0 || val > MAX_CLIENTS) return false;
+				if (*endptr != '\0' || val < 0 || val > MAX_CLIENTS)
+					return false;
 				out = static_cast<int>(val);
 				return true;
 			};

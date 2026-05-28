@@ -166,10 +166,10 @@ class CChat : public CComponent
 
 		bool IsValidRoom() const { return !m_AESKey.empty(); }
 
-		const std::string& GetRoomPrefix()
+		const std::string &GetRoomPrefix()
 		{
-			if(!IsValidRoom()) return EmptyPrefix;
-			if(m_CachedPrefix.empty())
+			if (!IsValidRoom()) return EmptyPrefix;
+			if (m_CachedPrefix.empty())
 			{
 				uint8_t Hash[32];
 				CryptoUtils::CU_SHA256(m_AESKey.data(), m_AESKey.size(), Hash);
@@ -198,29 +198,37 @@ class CChat : public CComponent
 			if (!IsValidRoom()) return "{eInvalid room";
 
 			std::string truncated;
-			if (Message.size() > 121) {
+			if (Message.size() > 121)
+			{
 				size_t pos = 0;
 				size_t remaining = 121;
-				while (pos < Message.size() && remaining > 0) {
+				while (pos < Message.size() && remaining > 0)
+				{
 					unsigned char c = static_cast<unsigned char>(Message[pos]);
 					size_t char_len = 1;
-					if (c >= 0x80) {
-						if ((c & 0xE0) == 0xC0) char_len = 2;
-						else if ((c & 0xF0) == 0xE0) char_len = 3;
-						else if ((c & 0xF8) == 0xF0) char_len = 4;
+					if (c >= 0x80)
+					{
+						if ((c & 0xE0) == 0xC0)
+							char_len = 2;
+						else if ((c & 0xF0) == 0xE0)
+							char_len = 3;
+						else if ((c & 0xF8) == 0xF0)
+							char_len = 4;
 					}
-					if (remaining < char_len) break;
+					if (remaining < char_len)
+						break;
 					remaining -= char_len;
 					pos += char_len;
 				}
 				truncated = Message.substr(0, pos);
-			} else {
+			}
+			else
+			{
 				truncated = Message;
 			}
 
 			std::vector<uint8_t> CipherRaw;
-			if (!CryptoUtils::AES_Encrypt(
-					m_AESKey,
+			if (!CryptoUtils::AES_Encrypt(m_AESKey,
 					std::vector<uint8_t>(truncated.begin(), truncated.end()),
 					CipherRaw))
 				return "{eEncode failed";
@@ -235,7 +243,8 @@ class CChat : public CComponent
 			if (!IsValidRoom()) return "{eInvalid room";
 			std::string encoded = RawChat.substr(11);
 			std::vector<uint8_t> Ciphertext = Base32768::Decode(encoded);
-			if (Ciphertext.empty()) return "{eEmpty message";
+			if (Ciphertext.empty())
+				return "{eEmpty message";
 			std::vector<uint8_t> PlainRaw;
 			if (!CryptoUtils::AES_Decrypt(m_AESKey, Ciphertext, PlainRaw))
 				return "{eDecode failed";
@@ -261,16 +270,16 @@ class CChat : public CComponent
 
 		std::string EncodeKeyDistributionMessage(int TargetClientID)
 		{
-			if(!IsValidRoom())
+			if (!IsValidRoom())
 				return "{eInvalid room";
 
 			auto it = m_JoinRequests.find(TargetClientID);
-			if(it == m_JoinRequests.end())
+			if (it == m_JoinRequests.end())
 				return "{eNo such request";
 
-			const std::vector<uint8_t>& peerPub = it->second;
+			const std::vector<uint8_t> &peerPub = it->second;
 			std::vector<uint8_t> cipher;
-			if(!CryptoUtils::X25519_Encrypt(peerPub, m_AESKey, cipher))
+			if (!CryptoUtils::X25519_Encrypt(peerPub, m_AESKey, cipher))
 				return "{eEncrypt failed";
 
 			std::string encodedCipher = Base32768::Encode(cipher);
@@ -280,7 +289,7 @@ class CChat : public CComponent
 			return "{k" + cidStr + encodedCipher;
 		}
 
-		void DecodeJoinRequest(const std::string& Message)
+		void DecodeJoinRequest(const std::string &Message)
 		{
 			if (Message.size() < 3 || Message[0] != '{' || Message[1] != 'j')
 				return;
