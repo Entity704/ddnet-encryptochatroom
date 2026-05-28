@@ -157,7 +157,7 @@ class CChat : public CComponent
 		std::map<int, std::vector<uint8_t>> m_JoinRequests;
 		int m_RequestObjectID = -1;
 
-		bool GenrateX25519KeyPair()
+		bool GenerateX25519KeyPair()
 		{
 			m_X25519PrivateKey.clear();
 			m_X25519PublicKey.clear();

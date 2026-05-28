@@ -84,7 +84,7 @@ CChat::CChat()
 	});
 
 	for(int i = 0; i < 5; i++)
-		if(m_PrivChatRoom.GenrateX25519KeyPair()) break;
+		if(m_PrivChatRoom.GenerateX25519KeyPair()) break;
 }
 
 void CChat::RegisterCommand(const char *pName, const char *pParams, const char *pHelpText)
@@ -318,7 +318,7 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 					{
 						if(m_PrivChatRoom.m_X25519PublicKey.empty())
 						{
-							if(!m_PrivChatRoom.GenrateX25519KeyPair())
+							if(!m_PrivChatRoom.GenerateX25519KeyPair())
 							{
 								Echo("Failed to generate key pair for joining");
 							}
