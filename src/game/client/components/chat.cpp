@@ -372,7 +372,7 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 				SendChatQueued(buf);
 				Echo("Join request canceled");
 			}
-			else if(Cmd == "approve")
+			else if(Cmd == "accept")
 			{
 				if(InputStr.length() >= 10)
 				{
@@ -447,7 +447,7 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 				Echo("]m r[message]    - Encrypt the message and send it");
 				Echo("]rj|jr i[id]    - Request to join the chat room where someone is");
 				Echo("]cjr    - Cancel your join request");
-				Echo("]approve i[id]    - Approve someone's request to join");
+				Echo("]accept i[id]    - Accept someone's request to join");
 				Echo("]decline i[id]    - Decline someone's request to join");
 				Echo("]help    - Show this help message");
 			}
