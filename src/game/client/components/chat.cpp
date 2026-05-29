@@ -767,7 +767,8 @@ void CChat::OnMessage(int MsgType, void *pRawMsg)
 			int MyID = GameClient()->m_Snap.m_LocalClientId;
 
 			auto SafeStoi = [](const std::string &s, int &out) -> bool {
-				if(s.empty()) return false;
+				if(s.empty())
+					return false;
 				char *endptr;
 				long val = strtol(s.c_str(), &endptr, 10);
 				if(*endptr != '\0' || val < 0 || val > MAX_CLIENTS)
