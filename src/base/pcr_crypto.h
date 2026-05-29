@@ -1,4 +1,5 @@
-#pragma once
+#ifndef BASE_PCR_CRYPTO_H
+#define BASE_PCR_CRYPTO_H
 
 #include <cstdint>
 #include <stdexcept>
@@ -173,3 +174,5 @@ public:
 		return result;
 	}
 };
+
+#endif // BASE_PCR_CRYPTO_H
