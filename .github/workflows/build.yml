@@ -114,6 +114,12 @@ jobs:
       run: |
         vcpkg install openssl:x64-windows
 
+    - name: Setup MSYS2
+      uses: msys2/setup-msys2@v2
+      with:
+        update: true
+        install: mingw-w64-x86_64-openssl
+
     - name: Prepare Windows MinGW
       if: contains(matrix.os, 'windows') && contains(matrix.name, 'mingw')
       run: |
@@ -121,7 +127,6 @@ jobs:
         rustup target add x86_64-pc-windows-gnu
         rustup default stable-x86_64-pc-windows-gnu
         rustup set default-host x86_64-pc-windows-gnu
-        pacman -S mingw-w64-x86_64-openssl
 
     - name: Install Vulkan SDK
       uses: humbletim/install-vulkan-sdk@v1.2
