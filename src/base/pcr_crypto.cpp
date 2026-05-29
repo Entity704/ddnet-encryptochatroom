@@ -2,21 +2,22 @@
 
 #include <engine/external/monocypher/src/monocypher.h>
 
+// 神经，给我包含顺序调了
+// clang-format off
 #if defined(__EMSCRIPTEN__)
 #include <emscripten.h>
 #include <stddef.h>
 #elif defined(_WIN32)
 #define WIN32_LEAN_AND_MEAN
 #define _WIN32_WINNT 0x0600
-#include <wincrypt.h>
 #include <windows.h>
+#include <wincrypt.h>
 #else
 #include <fcntl.h>
 #include <sys/random.h>
 #include <unistd.h>
 #endif
 
-// clang-format off
 #ifdef __EMSCRIPTEN__
 EM_JS(void, emscripten_get_random_bytes, (void* ptr, size_t len), {
     const CHUNK_SIZE = 65536;
