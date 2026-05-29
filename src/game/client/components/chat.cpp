@@ -314,8 +314,8 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 				if(InputStr.length() >= 5)
 				{
 					std::string Param = InputStr.substr(4);
-					int TargetID;
-					if(std::stringstream(Param) >> TargetID && TargetID >= 0 && TargetID < MAX_CLIENTS)
+					int TargetId;
+					if(std::stringstream(Param) >> TargetId && TargetId >= 0 && TargetId < MAX_CLIENTS)
 					{
 						if(m_PrivChatRoom.m_X25519PublicKey.empty())
 						{
@@ -325,7 +325,7 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 							}
 							else
 							{
-								std::string Request = m_PrivChatRoom.EncodeJoinRequest(TargetID);
+								std::string Request = m_PrivChatRoom.EncodeJoinRequest(TargetId);
 								if(Request.find("{e") == 0 || Request.empty())
 								{
 									Echo(Request.empty() ? "Missing public key" : Request.substr(2).c_str());
@@ -334,14 +334,14 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 								{
 									SendChatQueued(Request.c_str());
 									char Buf[128];
-									str_format(Buf, sizeof(Buf), "Join request sent to client %d", TargetID);
+									str_format(Buf, sizeof(Buf), "Join request sent to client %d", TargetId);
 									Echo(Buf);
 								}
 							}
 						}
 						else
 						{
-							std::string Request = m_PrivChatRoom.EncodeJoinRequest(TargetID);
+							std::string Request = m_PrivChatRoom.EncodeJoinRequest(TargetId);
 							if(Request.find("{e") == 0 || Request.empty())
 							{
 								Echo(Request.empty() ? "Missing public key" : Request.substr(2).c_str());
@@ -350,7 +350,7 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 							{
 								SendChatQueued(Request.c_str());
 								char Buf[128];
-								str_format(Buf, sizeof(Buf), "Join request sent to client %d", TargetID);
+								str_format(Buf, sizeof(Buf), "Join request sent to client %d", TargetId);
 								Echo(Buf);
 							}
 						}
@@ -367,7 +367,7 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 			}
 			else if(Cmd == "cjr")
 			{
-				m_PrivChatRoom.m_RequestObjectID = -1;
+				m_PrivChatRoom.m_RequestObjectId = -1;
 				char Buf[64];
 				str_format(Buf, sizeof(Buf), "{c%d", GameClient()->m_Snap.m_LocalClientId);
 				SendChatQueued(Buf);
@@ -375,13 +375,13 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 			}
 			else if(Cmd == "accept")
 			{
-				if(InputStr.length() >= 10)
+				if(InputStr.length() >= 9)
 				{
-					std::string Param = InputStr.substr(9);
-					int TargetID;
-					if(std::stringstream(Param) >> TargetID && TargetID >= 0 && TargetID < MAX_CLIENTS)
+					std::string Param = InputStr.substr(8);
+					int TargetId;
+					if(std::stringstream(Param) >> TargetId && TargetId >= 0 && TargetId < MAX_CLIENTS)
 					{
-						std::string KeyMsg = m_PrivChatRoom.EncodeKeyDistributionMessage(TargetID);
+						std::string KeyMsg = m_PrivChatRoom.EncodeKeyDistributionMessage(TargetId);
 						if(KeyMsg == "{eInvalid room" || KeyMsg == "{eNo such request" ||
 							KeyMsg == "{eEncrypt failed")
 						{
@@ -395,7 +395,7 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 						{
 							SendChatQueued(KeyMsg.c_str());
 							char Buf[128];
-							str_format(Buf, sizeof(Buf), "Approved client %d and sent room key", TargetID);
+							str_format(Buf, sizeof(Buf), "Approved client %d and sent room key", TargetId);
 							Echo(Buf);
 						}
 					}
@@ -414,15 +414,15 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 				if(InputStr.length() >= 10)
 				{
 					std::string Param = InputStr.substr(9);
-					int TargetID;
-					if(std::stringstream(Param) >> TargetID && TargetID >= 0 && TargetID < MAX_CLIENTS)
+					int TargetId;
+					if(std::stringstream(Param) >> TargetId && TargetId >= 0 && TargetId < MAX_CLIENTS)
 					{
-						auto It = m_PrivChatRoom.m_JoinRequests.find(TargetID);
+						auto It = m_PrivChatRoom.m_JoinRequests.find(TargetId);
 						if(It != m_PrivChatRoom.m_JoinRequests.end())
 						{
 							m_PrivChatRoom.m_JoinRequests.erase(It);
 							char Buf[128];
-							str_format(Buf, sizeof(Buf), "Declined join request from client %d", TargetID);
+							str_format(Buf, sizeof(Buf), "Declined join request from client %d", TargetId);
 							Echo(Buf);
 						}
 						else
@@ -763,8 +763,8 @@ void CChat::OnMessage(int MsgType, void *pRawMsg)
 		{
 			std::string Msg = pMsg->m_pMessage;
 			CLine CurrentLine = m_aLines[m_CurrentLine];
-			int SenderID = pMsg->m_ClientId;
-			int MyID = GameClient()->m_Snap.m_LocalClientId;
+			int SenderId = pMsg->m_ClientId;
+			int MyId = GameClient()->m_Snap.m_LocalClientId;
 
 			auto SafeStoi = [](const std::string &s, int &Out) -> bool {
 				if(s.empty())
@@ -788,7 +788,7 @@ void CChat::OnMessage(int MsgType, void *pRawMsg)
 					}
 					else
 					{
-						std::string OutMsg = std::string("[Decoded] ") + CurrentLine.m_aName + ": " + Plaintext;
+						std::string OutMsg = "[Decoded] " + std::to_string(pMsg->m_ClientId) + ": " + CurrentLine.m_aName + ": " + Plaintext;
 						Echo(OutMsg.c_str());
 					}
 				}
@@ -801,16 +801,16 @@ void CChat::OnMessage(int MsgType, void *pRawMsg)
 					std::string IdStr;
 					while(Pos < Msg.size() && isdigit(static_cast<unsigned char>(Msg[Pos])))
 						IdStr += Msg[Pos++];
-					int TargetID = -1;
-					if(SafeStoi(IdStr, TargetID) && TargetID == MyID)
+					int TargetId = -1;
+					if(SafeStoi(IdStr, TargetId) && TargetId == MyId)
 					{
 						std::string EncodedPub = Msg.substr(Pos);
 						std::vector<uint8_t> Pubkey = Base32768::Decode(EncodedPub);
 						if(Pubkey.size() == 32)
 						{
-							m_PrivChatRoom.m_JoinRequests[SenderID] = Pubkey;
+							m_PrivChatRoom.m_JoinRequests[SenderId] = Pubkey;
 							char Buf[256];
-							str_format(Buf, sizeof(Buf), "Received join request from client %d: %s. Use ]accept %d or ]decline %d", SenderID, CurrentLine.m_aName, SenderID, SenderID);
+							str_format(Buf, sizeof(Buf), "Received join request from client %d: %s. Use ]accept %d or ]decline %d", SenderId, CurrentLine.m_aName, SenderId, SenderId);
 							Echo(Buf);
 						}
 						else
@@ -826,8 +826,8 @@ void CChat::OnMessage(int MsgType, void *pRawMsg)
 				std::string IdStr;
 				while(Pos < Msg.size() && isdigit(static_cast<unsigned char>(Msg[Pos])))
 					IdStr += Msg[Pos++];
-				int TargetID = -1;
-				if(SafeStoi(IdStr, TargetID) && TargetID == MyID)
+				int TargetId = -1;
+				if(SafeStoi(IdStr, TargetId) && TargetId == MyId)
 				{
 					std::string EncodedCipher = Msg.substr(Pos);
 					if(!EncodedCipher.empty())
@@ -837,18 +837,18 @@ void CChat::OnMessage(int MsgType, void *pRawMsg)
 						{
 							if(!m_PrivChatRoom.m_X25519PrivateKey.empty())
 							{
-								if(SenderID != m_PrivChatRoom.m_RequestObjectID)
+								if(SenderId != m_PrivChatRoom.m_RequestObjectId)
 								{
 									Echo("Received room key from unexpected client");
 								}
 								else
 								{
 									std::vector<uint8_t> AESKey;
-									if(CryptoUtils::X25519_Decrypt(m_PrivChatRoom.m_X25519PrivateKey, CipherText, AESKey))
+									if(CryptoUtils::X25519Decrypt(m_PrivChatRoom.m_X25519PrivateKey, CipherText, AESKey))
 									{
 										m_PrivChatRoom.m_AESKey = AESKey;
 										m_PrivChatRoom.m_JoinRequests.clear();
-										m_PrivChatRoom.m_RequestObjectID = -1;
+										m_PrivChatRoom.m_RequestObjectId = -1;
 										Echo("Successfully joined the private chat room!");
 									}
 									else
@@ -875,15 +875,15 @@ void CChat::OnMessage(int MsgType, void *pRawMsg)
 				std::string IdStr;
 				while(Pos < Msg.size() && isdigit(static_cast<unsigned char>(Msg[Pos])))
 					IdStr += Msg[Pos++];
-				int CancelID = -1;
-				if(SafeStoi(IdStr, CancelID) && CancelID == MyID)
+				int CancelId = -1;
+				if(SafeStoi(IdStr, CancelId) && CancelId == MyId)
 				{
-					auto It = m_PrivChatRoom.m_JoinRequests.find(SenderID);
+					auto It = m_PrivChatRoom.m_JoinRequests.find(SenderId);
 					if(It != m_PrivChatRoom.m_JoinRequests.end())
 					{
 						m_PrivChatRoom.m_JoinRequests.erase(It);
 						char Buf[256];
-						str_format(Buf, sizeof(Buf), "%d: %s canceled the join request", SenderID, CurrentLine.m_aName);
+						str_format(Buf, sizeof(Buf), "%d: %s canceled the join request", SenderId, CurrentLine.m_aName);
 						Echo(Buf);
 					}
 				}

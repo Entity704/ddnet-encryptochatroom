@@ -155,7 +155,7 @@ class CChat : public CComponent
 		std::vector<uint8_t> m_X25519PublicKey;
 		std::vector<uint8_t> m_AESKey;
 		std::map<int, std::vector<uint8_t>> m_JoinRequests;
-		int m_RequestObjectID = -1;
+		int m_RequestObjectId = -1;
 
 		bool GenerateX25519KeyPair()
 		{
@@ -173,7 +173,7 @@ class CChat : public CComponent
 			if(m_CachedPrefix.empty())
 			{
 				uint8_t Hash[32];
-				CryptoUtils::CU_SHA256(m_AESKey.data(), m_AESKey.size(), Hash);
+				CryptoUtils::Blake2b(m_AESKey.data(), m_AESKey.size(), Hash);
 				std::vector<uint8_t> Prefix(Hash, Hash + 3);
 				m_CachedPrefix = Base32768::Encode(Prefix);
 			}
@@ -183,8 +183,8 @@ class CChat : public CComponent
 		void CreateNewRoom()
 		{
 			QuitRoom();
-			m_RequestObjectID = -1;
-			CryptoUtils::GenerateAESKey(m_AESKey);
+			m_RequestObjectId = -1;
+			CryptoUtils::GenerateXChaCha20Poly1305Key(m_AESKey);
 		}
 
 		void QuitRoom()
@@ -200,10 +200,10 @@ class CChat : public CComponent
 				return "{eInvalid room";
 
 			std::string Truncated;
-			if(Message.size() > 121)
+			if(Message.size() > 111)
 			{
 				size_t Pos = 0;
-				size_t Remaining = 121;
+				size_t Remaining = 111;
 				while(Pos < Message.size() && Remaining > 0)
 				{
 					unsigned char c = static_cast<unsigned char>(Message[Pos]);
@@ -230,7 +230,7 @@ class CChat : public CComponent
 			}
 
 			std::vector<uint8_t> CipherRaw;
-			if(!CryptoUtils::AES_Encrypt(m_AESKey,
+			if(!CryptoUtils::XChaCha20Poly1305Encrypt(m_AESKey,
 				   std::vector<uint8_t>(Truncated.begin(), Truncated.end()),
 				   CipherRaw))
 				return "{eEncode failed";
@@ -245,48 +245,48 @@ class CChat : public CComponent
 			if(!IsValidRoom())
 				return "{eInvalid room";
 			std::string Encoded = RawChat.substr(11);
-			std::vector<uint8_t> CipherText = Base32768::Decode(Encoded);
-			if(CipherText.empty())
+			std::vector<uint8_t> Ciphertext = Base32768::Decode(Encoded);
+			if(Ciphertext.empty())
 				return "{eEmpty message";
 			std::vector<uint8_t> PlainRaw;
-			if(!CryptoUtils::AES_Decrypt(m_AESKey, CipherText, PlainRaw))
+			if(!CryptoUtils::XChaCha20Poly1305Decrypt(m_AESKey, Ciphertext, PlainRaw))
 				return "{eDecode failed";
 			return std::string(PlainRaw.begin(), PlainRaw.end());
 		}
 
-		std::string EncodeJoinRequest(int ClientID)
+		std::string EncodeJoinRequest(int ClientId)
 		{
-			if(ClientID < 0 || ClientID >= MAX_CLIENTS)
+			if(ClientId < 0 || ClientId >= MAX_CLIENTS)
 				return "{eInvalid client ID";
 
 			if(m_X25519PublicKey.size() != 32)
 				return "{eNo public key";
 
-			if(m_RequestObjectID != -1 && m_RequestObjectID != ClientID)
+			if(m_RequestObjectId != -1 && m_RequestObjectId != ClientId)
 				return "{ePending join request exists";
 
-			m_RequestObjectID = ClientID;
-			std::string CidStr = std::to_string(ClientID);
+			m_RequestObjectId = ClientId;
+			std::string CidStr = std::to_string(ClientId);
 			std::string EncodedPub = Base32768::Encode(m_X25519PublicKey);
 			return "{j" + CidStr + EncodedPub;
 		}
 
-		std::string EncodeKeyDistributionMessage(int TargetClientID)
+		std::string EncodeKeyDistributionMessage(int TargetClientId)
 		{
 			if(!IsValidRoom())
 				return "{eInvalid room";
 
-			auto It = m_JoinRequests.find(TargetClientID);
+			auto It = m_JoinRequests.find(TargetClientId);
 			if(It == m_JoinRequests.end())
 				return "{eNo such request";
 
 			const std::vector<uint8_t> &PeerPub = It->second;
 			std::vector<uint8_t> Cipher;
-			if(!CryptoUtils::X25519_Encrypt(PeerPub, m_AESKey, Cipher))
+			if(!CryptoUtils::X25519Encrypt(PeerPub, m_AESKey, Cipher))
 				return "{eEncrypt failed";
 
 			std::string EncodedCipher = Base32768::Encode(Cipher);
-			std::string CidStr = std::to_string(TargetClientID);
+			std::string CidStr = std::to_string(TargetClientId);
 
 			m_JoinRequests.erase(It);
 			return "{k" + CidStr + EncodedCipher;

@@ -9,169 +9,172 @@
 class CryptoUtils
 {
 public:
-	static bool GenerateX25519KeyPair(std::vector<uint8_t> &out_priv_key, std::vector<uint8_t> &out_pub_key);
-	static bool X25519_Encrypt(const std::vector<uint8_t> &receiver_pub_bytes,
-		const std::vector<uint8_t> &plaintext,
-		std::vector<uint8_t> &out_packet);
-	static bool X25519_Decrypt(const std::vector<uint8_t> &my_priv_bytes,
-		const std::vector<uint8_t> &packet,
-		std::vector<uint8_t> &out_plaintext);
+	static bool GenerateX25519KeyPair(std::vector<uint8_t> &OutPrivKey, std::vector<uint8_t> &OutPubKey);
+	static bool X25519Encrypt(const std::vector<uint8_t> &ReceiverPubBytes,
+		const std::vector<uint8_t> &Plaintext,
+		std::vector<uint8_t> &OutPacket);
+	static bool X25519Decrypt(const std::vector<uint8_t> &MyPrivBytes,
+		const std::vector<uint8_t> &Packet,
+		std::vector<uint8_t> &OutPlaintext);
 
-	static bool GenerateAESKey(std::vector<uint8_t> &out_aes_key);
-	static bool AES_Encrypt(const std::vector<uint8_t> &aes_key,
-		const std::vector<uint8_t> &plaintext,
-		std::vector<uint8_t> &out_packet);
-	static bool AES_Decrypt(const std::vector<uint8_t> &aes_key,
-		const std::vector<uint8_t> &packet,
-		std::vector<uint8_t> &out_plaintext);
+	static bool GenerateXChaCha20Poly1305Key(std::vector<uint8_t> &OutXChaCha20Poly1305Key);
+	static bool XChaCha20Poly1305Encrypt(const std::vector<uint8_t> &XChaCha20Poly1305Key,
+		const std::vector<uint8_t> &Plaintext,
+		std::vector<uint8_t> &OutPacket);
+	static bool XChaCha20Poly1305Decrypt(const std::vector<uint8_t> &XChaCha20Poly1305Key,
+		const std::vector<uint8_t> &Packet,
+		std::vector<uint8_t> &OutPlaintext);
 
-	static unsigned char *CU_SHA256(const unsigned char *d, size_t n, unsigned char *md);
+	static unsigned char *Blake2b(const unsigned char *Message, size_t MessageSize, unsigned char *OutHash);
+
+private:
+	static bool PlatformRandomBytes(uint8_t *Buf, size_t Len);
 };
 
 class Base32768
 {
 private:
-	static uint32_t IndexToCodePoint(uint16_t index)
+	static uint32_t IndexToCodePoint(uint16_t Index)
 	{
-		if(index < 27648)
-			return 0x3400 + index;
+		if(Index < 27648)
+			return 0x3400 + Index;
 		else
-			return 0xAC00 + (index - 27648);
+			return 0xAC00 + (Index - 27648);
 	}
 
-	static int32_t CodePointToIndex(uint32_t cp)
+	static int32_t CodePointToIndex(uint32_t Cp)
 	{
-		if(cp >= 0x3400 && cp <= 0x9FFF)
-			return cp - 0x3400;
-		else if(cp >= 0xAC00 && cp <= 0xBFFF)
-			return cp - 0xAC00 + 27648;
+		if(Cp >= 0x3400 && Cp <= 0x9FFF)
+			return Cp - 0x3400;
+		else if(Cp >= 0xAC00 && Cp <= 0xBFFF)
+			return Cp - 0xAC00 + 27648;
 		return -1;
 	}
 
-	static void AppendCodePointAsUTF8(uint32_t cp, std::string &out)
+	static void AppendCodePointAsUTF8(uint32_t Cp, std::string &Out)
 	{
-		if(cp <= 0x7F)
+		if(Cp <= 0x7F)
 		{
-			out.push_back(static_cast<char>(cp));
+			Out.push_back(static_cast<char>(Cp));
 		}
-		else if(cp <= 0x7FF)
+		else if(Cp <= 0x7FF)
 		{
-			out.push_back(static_cast<char>(0xC0 | ((cp >> 6) & 0x1F)));
-			out.push_back(static_cast<char>(0x80 | (cp & 0x3F)));
+			Out.push_back(static_cast<char>(0xC0 | ((Cp >> 6) & 0x1F)));
+			Out.push_back(static_cast<char>(0x80 | (Cp & 0x3F)));
 		}
-		else if(cp <= 0xFFFF)
+		else if(Cp <= 0xFFFF)
 		{
-			out.push_back(static_cast<char>(0xE0 | ((cp >> 12) & 0x0F)));
-			out.push_back(static_cast<char>(0x80 | ((cp >> 6) & 0x3F)));
-			out.push_back(static_cast<char>(0x80 | (cp & 0x3F)));
+			Out.push_back(static_cast<char>(0xE0 | ((Cp >> 12) & 0x0F)));
+			Out.push_back(static_cast<char>(0x80 | ((Cp >> 6) & 0x3F)));
+			Out.push_back(static_cast<char>(0x80 | (Cp & 0x3F)));
 		}
 		else
 		{
-			out.push_back(0xEF);
-			out.push_back(0xBF);
-			out.push_back(0xBD);
+			Out.push_back(0xEF);
+			Out.push_back(0xBF);
+			Out.push_back(0xBD);
 		}
 	}
 
-	static uint32_t NextUTF8CodePoint(const std::string &str, size_t &start_idx)
+	static uint32_t NextUTF8CodePoint(const std::string &Str, size_t &StartIndex)
 	{
-		if(start_idx >= str.size())
+		if(StartIndex >= Str.size())
 			return 0;
-		uint8_t c1 = str[start_idx++];
-		if((c1 & 0x80) == 0)
-			return c1;
+		uint8_t C1 = Str[StartIndex++];
+		if((C1 & 0x80) == 0)
+			return C1;
 
-		if((c1 & 0xE0) == 0xC0)
+		if((C1 & 0xE0) == 0xC0)
 		{
-			if(start_idx >= str.size())
+			if(StartIndex >= Str.size())
 				return 0;
-			uint8_t c2 = str[start_idx++];
-			return ((c1 & 0x1F) << 6) | (c2 & 0x3F);
+			uint8_t C2 = Str[StartIndex++];
+			return ((C1 & 0x1F) << 6) | (C2 & 0x3F);
 		}
-		else if((c1 & 0xF0) == 0xE0)
+		else if((C1 & 0xF0) == 0xE0)
 		{
-			if(start_idx + 1 >= str.size())
+			if(StartIndex + 1 >= Str.size())
 				return 0;
-			uint8_t c2 = str[start_idx++];
-			uint8_t c3 = str[start_idx++];
-			return ((c1 & 0x0F) << 12) | ((c2 & 0x3F) << 6) | (c3 & 0x3F);
+			uint8_t C2 = Str[StartIndex++];
+			uint8_t C3 = Str[StartIndex++];
+			return ((C1 & 0x0F) << 12) | ((C2 & 0x3F) << 6) | (C3 & 0x3F);
 		}
 		return 0;
 	}
 
 public:
-	static std::string Encode(const std::vector<uint8_t> &data)
+	static std::string Encode(const std::vector<uint8_t> &Data)
 	{
-		std::string result;
-		uint32_t buffer = 0;
-		int bits_left = 0;
+		std::string Result;
+		uint32_t Buffer = 0;
+		int BitsLeft = 0;
 
-		uint16_t origin_len = static_cast<uint16_t>(data.size());
-		std::vector<uint8_t> payload;
-		payload.push_back(static_cast<uint8_t>(origin_len >> 8));
-		payload.push_back(static_cast<uint8_t>(origin_len & 0xFF));
-		payload.insert(payload.end(), data.begin(), data.end());
+		uint16_t OriginLen = static_cast<uint16_t>(Data.size());
+		std::vector<uint8_t> Payload;
+		Payload.push_back(static_cast<uint8_t>(OriginLen >> 8));
+		Payload.push_back(static_cast<uint8_t>(OriginLen & 0xFF));
+		Payload.insert(Payload.end(), Data.begin(), Data.end());
 
-		for(uint8_t byte : payload)
+		for(uint8_t Byte : Payload)
 		{
-			buffer = (buffer << 8) | byte;
-			bits_left += 8;
+			Buffer = (Buffer << 8) | Byte;
+			BitsLeft += 8;
 
-			while(bits_left >= 15)
+			while(BitsLeft >= 15)
 			{
-				bits_left -= 15;
-				uint16_t index = (buffer >> bits_left) & 0x7FFF;
-				AppendCodePointAsUTF8(IndexToCodePoint(index), result);
+				BitsLeft -= 15;
+				uint16_t Index = (Buffer >> BitsLeft) & 0x7FFF;
+				AppendCodePointAsUTF8(IndexToCodePoint(Index), Result);
 			}
 		}
 
-		if(bits_left > 0)
+		if(BitsLeft > 0)
 		{
-			uint16_t index = (buffer << (15 - bits_left)) & 0x7FFF;
-			AppendCodePointAsUTF8(IndexToCodePoint(index), result);
+			uint16_t Index = (Buffer << (15 - BitsLeft)) & 0x7FFF;
+			AppendCodePointAsUTF8(IndexToCodePoint(Index), Result);
 		}
 
-		return result;
+		return Result;
 	}
 
-	static std::vector<uint8_t> Decode(const std::string &str)
+	static std::vector<uint8_t> Decode(const std::string &Str)
 	{
-		std::vector<uint8_t> raw_stream;
-		uint32_t buffer = 0;
-		int bits_left = 0;
-		size_t str_idx = 0;
+		std::vector<uint8_t> RawStream;
+		uint32_t Buffer = 0;
+		int BitsLeft = 0;
+		size_t StrIndex = 0;
 
-		while(str_idx < str.size())
+		while(StrIndex < Str.size())
 		{
-			uint32_t cp = NextUTF8CodePoint(str, str_idx);
-			if(cp == 0)
+			uint32_t Cp = NextUTF8CodePoint(Str, StrIndex);
+			if(Cp == 0)
 				break;
 
-			int32_t index = CodePointToIndex(cp);
-			if(index == -1)
+			int32_t Index = CodePointToIndex(Cp);
+			if(Index == -1)
 				continue;
 
-			buffer = (buffer << 15) | index;
-			bits_left += 15;
+			Buffer = (Buffer << 15) | Index;
+			BitsLeft += 15;
 
-			while(bits_left >= 8)
+			while(BitsLeft >= 8)
 			{
-				bits_left -= 8;
-				raw_stream.push_back(static_cast<uint8_t>((buffer >> bits_left) & 0xFF));
+				BitsLeft -= 8;
+				RawStream.push_back(static_cast<uint8_t>((Buffer >> BitsLeft) & 0xFF));
 			}
 		}
 
-		if(raw_stream.size() < 2)
+		if(RawStream.size() < 2)
 			return {};
 
-		uint16_t expected_len = (static_cast<uint16_t>(raw_stream[0]) << 8) | raw_stream[1];
+		uint16_t ExpectedLen = (static_cast<uint16_t>(RawStream[0]) << 8) | RawStream[1];
 
-		std::vector<uint8_t> result;
-		if(raw_stream.size() >= static_cast<size_t>(2 + expected_len))
+		std::vector<uint8_t> Result;
+		if(RawStream.size() >= static_cast<size_t>(2 + ExpectedLen))
 		{
-			result.insert(result.end(), raw_stream.begin() + 2, raw_stream.begin() + 2 + expected_len);
+			Result.insert(Result.end(), RawStream.begin() + 2, RawStream.begin() + 2 + ExpectedLen);
 		}
-		return result;
+		return Result;
 	}
 };
 
