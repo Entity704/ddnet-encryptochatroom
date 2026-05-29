@@ -8,8 +8,8 @@
 #elif defined(_WIN32)
 #define WIN32_LEAN_AND_MEAN
 #define _WIN32_WINNT 0x0600
-#include <windows.h>
 #include <wincrypt.h>
+#include <windows.h>
 #else
 #include <fcntl.h>
 #include <sys/random.h>
@@ -53,6 +53,23 @@ bool CryptoUtils::PlatformRandomBytes(uint8_t *Buf, size_t Len)
 	return Success;
 #elif defined(__APPLE__)
 	arc4random_buf(Buf, Len);
+	return true;
+#elif defined(__ANDROID__)
+	int Fd = open("/dev/urandom", O_RDONLY | O_CLOEXEC);
+	if(Fd < 0)
+		return false;
+	size_t BytesRead = 0;
+	while(BytesRead < Len)
+	{
+		ssize_t R = read(Fd, Buf + BytesRead, Len - BytesRead);
+		if(R <= 0)
+		{
+			close(Fd);
+			return false;
+		}
+		BytesRead += R;
+	}
+	close(Fd);
 	return true;
 #else
 	ssize_t Ret = getrandom(Buf, Len, 0);
