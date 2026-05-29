@@ -70,6 +70,10 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
   set(TARGET_OS "emscripten")
 endif()
 
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 11 AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 12)
+    add_compile_options(-Wno-stringop-overflow)
+endif()
+
 include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
 if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.18)
