@@ -6,14 +6,17 @@
 #include <emscripten.h>
 #include <stddef.h>
 #elif defined(_WIN32)
-#include <wincrypt.h>
+#define WIN32_LEAN_AND_MEAN
+#define _WIN32_WINNT 0x0600
 #include <windows.h>
+#include <wincrypt.h>
 #else
 #include <fcntl.h>
 #include <sys/random.h>
 #include <unistd.h>
 #endif
 
+// clang-format off
 #ifdef __EMSCRIPTEN__
 EM_JS(void, emscripten_get_random_bytes, (void* ptr, size_t len), {
     const CHUNK_SIZE = 65536;
@@ -32,6 +35,7 @@ EM_JS(void, emscripten_get_random_bytes, (void* ptr, size_t len), {
     }
 });
 #endif
+// clang-format on
 
 bool CryptoUtils::PlatformRandomBytes(uint8_t *Buf, size_t Len)
 {
@@ -47,6 +51,9 @@ bool CryptoUtils::PlatformRandomBytes(uint8_t *Buf, size_t Len)
 	bool Success = CryptGenRandom(HProvider, static_cast<DWORD>(Len), Buf);
 	CryptReleaseContext(HProvider, 0);
 	return Success;
+#elif defined(__APPLE__)
+	arc4random_buf(Buf, Len);
+	return true;
 #else
 	ssize_t Ret = getrandom(Buf, Len, 0);
 	if(Ret == static_cast<ssize_t>(Len))
