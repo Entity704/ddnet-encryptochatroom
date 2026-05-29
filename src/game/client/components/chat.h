@@ -3,8 +3,8 @@
 #ifndef GAME_CLIENT_COMPONENTS_CHAT_H
 #define GAME_CLIENT_COMPONENTS_CHAT_H
 
-#include <base/str.h>
 #include <base/pcr_crypto.h>
+#include <base/str.h>
 
 #include <engine/console.h>
 #include <engine/shared/config.h>
@@ -17,8 +17,8 @@
 #include <game/client/lineinput.h>
 #include <game/client/render.h>
 
-#include <vector>
 #include <map>
+#include <vector>
 
 constexpr auto SAVES_FILE = "ddnet-saves.txt";
 
@@ -168,7 +168,8 @@ class CChat : public CComponent
 
 		const std::string &GetRoomPrefix()
 		{
-			if(!IsValidRoom()) return EmptyPrefix;
+			if(!IsValidRoom())
+				return EmptyPrefix;
 			if(m_CachedPrefix.empty())
 			{
 				uint8_t Hash[32];
@@ -195,14 +196,15 @@ class CChat : public CComponent
 
 		std::string EncodeMessage(const std::string &Message)
 		{
-			if(!IsValidRoom()) return "{eInvalid room";
+			if(!IsValidRoom())
+				return "{eInvalid room";
 
 			std::string truncated;
 			if(Message.size() > 121)
 			{
 				size_t pos = 0;
 				size_t remaining = 121;
-				while (pos < Message.size() && remaining > 0)
+				while(pos < Message.size() && remaining > 0)
 				{
 					unsigned char c = static_cast<unsigned char>(Message[pos]);
 					size_t char_len = 1;
@@ -229,8 +231,8 @@ class CChat : public CComponent
 
 			std::vector<uint8_t> CipherRaw;
 			if(!CryptoUtils::AES_Encrypt(m_AESKey,
-					std::vector<uint8_t>(truncated.begin(), truncated.end()),
-					CipherRaw))
+				   std::vector<uint8_t>(truncated.begin(), truncated.end()),
+				   CipherRaw))
 				return "{eEncode failed";
 
 			std::string encoded = Base32768::Encode(CipherRaw);
@@ -240,7 +242,8 @@ class CChat : public CComponent
 
 		std::string DecodeMessage(const std::string &RawChat)
 		{
-			if(!IsValidRoom()) return "{eInvalid room";
+			if(!IsValidRoom())
+				return "{eInvalid room";
 			std::string encoded = RawChat.substr(11);
 			std::vector<uint8_t> Ciphertext = Base32768::Decode(encoded);
 			if(Ciphertext.empty())
@@ -296,7 +299,7 @@ class CChat : public CComponent
 
 			size_t pos = 2;
 			std::string cidStr;
-			while (pos < Message.size() && isdigit(static_cast<unsigned char>(Message[pos])))
+			while(pos < Message.size() && isdigit(static_cast<unsigned char>(Message[pos])))
 				cidStr += Message[pos++];
 
 			if(cidStr.empty())
