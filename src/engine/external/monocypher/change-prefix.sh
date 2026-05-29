@@ -63,8 +63,8 @@
 
 set -e
 
-find . -name "*.*"                                      \
-    | egrep    "\.(c|h)$"                               \
-    | egrep -v "^\./tests/(gen|externals|speed/speed-)" \
-    | xargs sed -i "s/crypto_/$1_/g"                    \
+find . -name "*.*"                                        \
+    | grep -E    "\.(c|h)$"                               \
+    | grep -E -v "^\./tests/(gen|externals|speed/speed-)" \
+    | xargs sed -i "s/crypto_/$1_/g"                      \
             tests/externals/ed25519-donna/ed25519-hash-custom.h
