@@ -168,8 +168,8 @@ class CChat : public CComponent
 
 		const std::string &GetRoomPrefix()
 		{
-			if (!IsValidRoom()) return EmptyPrefix;
-			if (m_CachedPrefix.empty())
+			if(!IsValidRoom()) return EmptyPrefix;
+			if(m_CachedPrefix.empty())
 			{
 				uint8_t Hash[32];
 				CryptoUtils::CU_SHA256(m_AESKey.data(), m_AESKey.size(), Hash);
@@ -195,10 +195,10 @@ class CChat : public CComponent
 
 		std::string EncodeMessage(const std::string &Message)
 		{
-			if (!IsValidRoom()) return "{eInvalid room";
+			if(!IsValidRoom()) return "{eInvalid room";
 
 			std::string truncated;
-			if (Message.size() > 121)
+			if(Message.size() > 121)
 			{
 				size_t pos = 0;
 				size_t remaining = 121;
@@ -206,16 +206,16 @@ class CChat : public CComponent
 				{
 					unsigned char c = static_cast<unsigned char>(Message[pos]);
 					size_t char_len = 1;
-					if (c >= 0x80)
+					if(c >= 0x80)
 					{
-						if ((c & 0xE0) == 0xC0)
+						if((c & 0xE0) == 0xC0)
 							char_len = 2;
-						else if ((c & 0xF0) == 0xE0)
+						else if((c & 0xF0) == 0xE0)
 							char_len = 3;
-						else if ((c & 0xF8) == 0xF0)
+						else if((c & 0xF8) == 0xF0)
 							char_len = 4;
 					}
-					if (remaining < char_len)
+					if(remaining < char_len)
 						break;
 					remaining -= char_len;
 					pos += char_len;
@@ -228,7 +228,7 @@ class CChat : public CComponent
 			}
 
 			std::vector<uint8_t> CipherRaw;
-			if (!CryptoUtils::AES_Encrypt(m_AESKey,
+			if(!CryptoUtils::AES_Encrypt(m_AESKey,
 					std::vector<uint8_t>(truncated.begin(), truncated.end()),
 					CipherRaw))
 				return "{eEncode failed";
@@ -240,26 +240,26 @@ class CChat : public CComponent
 
 		std::string DecodeMessage(const std::string &RawChat)
 		{
-			if (!IsValidRoom()) return "{eInvalid room";
+			if(!IsValidRoom()) return "{eInvalid room";
 			std::string encoded = RawChat.substr(11);
 			std::vector<uint8_t> Ciphertext = Base32768::Decode(encoded);
-			if (Ciphertext.empty())
+			if(Ciphertext.empty())
 				return "{eEmpty message";
 			std::vector<uint8_t> PlainRaw;
-			if (!CryptoUtils::AES_Decrypt(m_AESKey, Ciphertext, PlainRaw))
+			if(!CryptoUtils::AES_Decrypt(m_AESKey, Ciphertext, PlainRaw))
 				return "{eDecode failed";
 			return std::string(PlainRaw.begin(), PlainRaw.end());
 		}
 
 		std::string EncodeJoinRequest(int ClientID)
 		{
-			if (ClientID < 0 || ClientID >= MAX_CLIENTS)
+			if(ClientID < 0 || ClientID >= MAX_CLIENTS)
 				return "{eInvalid client ID";
 
-			if (m_X25519PublicKey.size() != 32)
+			if(m_X25519PublicKey.size() != 32)
 				return "{eNo public key";
 
-			if (m_RequestObjectID != -1 && m_RequestObjectID != ClientID)
+			if(m_RequestObjectID != -1 && m_RequestObjectID != ClientID)
 				return "{ePending join request exists";
 
 			m_RequestObjectID = ClientID;
@@ -270,16 +270,16 @@ class CChat : public CComponent
 
 		std::string EncodeKeyDistributionMessage(int TargetClientID)
 		{
-			if (!IsValidRoom())
+			if(!IsValidRoom())
 				return "{eInvalid room";
 
 			auto it = m_JoinRequests.find(TargetClientID);
-			if (it == m_JoinRequests.end())
+			if(it == m_JoinRequests.end())
 				return "{eNo such request";
 
 			const std::vector<uint8_t> &peerPub = it->second;
 			std::vector<uint8_t> cipher;
-			if (!CryptoUtils::X25519_Encrypt(peerPub, m_AESKey, cipher))
+			if(!CryptoUtils::X25519_Encrypt(peerPub, m_AESKey, cipher))
 				return "{eEncrypt failed";
 
 			std::string encodedCipher = Base32768::Encode(cipher);
@@ -291,7 +291,7 @@ class CChat : public CComponent
 
 		void DecodeJoinRequest(const std::string &Message)
 		{
-			if (Message.size() < 3 || Message[0] != '{' || Message[1] != 'j')
+			if(Message.size() < 3 || Message[0] != '{' || Message[1] != 'j')
 				return;
 
 			size_t pos = 2;
@@ -299,13 +299,13 @@ class CChat : public CComponent
 			while (pos < Message.size() && isdigit(static_cast<unsigned char>(Message[pos])))
 				cidStr += Message[pos++];
 
-			if (cidStr.empty())
+			if(cidStr.empty())
 				return;
 
 			int clientID = std::stoi(cidStr);
 			std::string encodedPub = Message.substr(pos);
 			std::vector<uint8_t> pubkey = Base32768::Decode(encodedPub);
-			if (pubkey.size() != 32)
+			if(pubkey.size() != 32)
 				return;
 
 			m_JoinRequests[clientID] = pubkey;
