@@ -413,9 +413,9 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 			{
 				if(InputStr.length() >= 10)
 				{
-					std::string param = InputStr.substr(9);
+					std::string Param = InputStr.substr(9);
 					int TargetID;
-					if(std::stringstream(param) >> TargetID && TargetID >= 0 && TargetID < MAX_CLIENTS)
+					if(std::stringstream(Param) >> TargetID && TargetID >= 0 && TargetID < MAX_CLIENTS)
 					{
 						auto It = m_PrivChatRoom.m_JoinRequests.find(TargetID);
 						if(It != m_PrivChatRoom.m_JoinRequests.end())
