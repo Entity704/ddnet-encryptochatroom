@@ -810,7 +810,7 @@ void CChat::OnMessage(int MsgType, void *pRawMsg)
 						{
 							m_PrivChatRoom.m_JoinRequests[SenderID] = Pubkey;
 							char Buf[256];
-							str_format(Buf, sizeof(Buf), "Received join request from client %d: %s. Use ]approve %d or ]decline %d", SenderID, CurrentLine.m_aName, SenderID, SenderID);
+							str_format(Buf, sizeof(Buf), "Received join request from client %d: %s. Use ]accept %d or ]decline %d", SenderID, CurrentLine.m_aName, SenderID, SenderID);
 							Echo(Buf);
 						}
 						else
