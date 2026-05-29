@@ -369,7 +369,7 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 			{
 				m_PrivChatRoom.m_RequestObjectId = -1;
 				char Buf[64];
-				str_format(Buf, sizeof(Buf), "{c%d", GameClient()->m_Snap.m_LocalClientId);
+				str_format(Buf, sizeof(Buf), "{c%d", m_PrivChatRoom.m_RequestObjectId);
 				SendChatQueued(Buf);
 				Echo("Join request canceled");
 			}
@@ -843,12 +843,10 @@ void CChat::OnMessage(int MsgType, void *pRawMsg)
 								}
 								else
 								{
-									std::vector<uint8_t> AESKey;
-									if(CryptoUtils::X25519Decrypt(m_PrivChatRoom.m_X25519PrivateKey, CipherText, AESKey))
+									std::vector<uint8_t> XChaCha20Poly1305Key;
+									if(CryptoUtils::X25519Decrypt(m_PrivChatRoom.m_X25519PrivateKey, CipherText, XChaCha20Poly1305Key))
 									{
-										m_PrivChatRoom.m_AESKey = AESKey;
-										m_PrivChatRoom.m_JoinRequests.clear();
-										m_PrivChatRoom.m_RequestObjectId = -1;
+										m_PrivChatRoom.SetRoomKey(XChaCha20Poly1305Key);
 										Echo("Successfully joined the private chat room!");
 									}
 									else

@@ -153,18 +153,11 @@ class CChat : public CComponent
 	public:
 		std::vector<uint8_t> m_X25519PrivateKey;
 		std::vector<uint8_t> m_X25519PublicKey;
-		std::vector<uint8_t> m_AESKey;
+		std::vector<uint8_t> m_XChaCha20Poly1305Key;
 		std::map<int, std::vector<uint8_t>> m_JoinRequests;
 		int m_RequestObjectId = -1;
 
-		bool GenerateX25519KeyPair()
-		{
-			m_X25519PrivateKey.clear();
-			m_X25519PublicKey.clear();
-			return CryptoUtils::GenerateX25519KeyPair(m_X25519PrivateKey, m_X25519PublicKey);
-		}
-
-		bool IsValidRoom() const { return !m_AESKey.empty(); }
+		bool IsValidRoom() const { return !m_XChaCha20Poly1305Key.empty(); }
 
 		const std::string &GetRoomPrefix()
 		{
@@ -173,25 +166,38 @@ class CChat : public CComponent
 			if(m_CachedPrefix.empty())
 			{
 				uint8_t Hash[32];
-				CryptoUtils::Blake2b(m_AESKey.data(), m_AESKey.size(), Hash);
+				CryptoUtils::Blake2b(m_XChaCha20Poly1305Key.data(), m_XChaCha20Poly1305Key.size(), Hash);
 				std::vector<uint8_t> Prefix(Hash, Hash + 3);
 				m_CachedPrefix = Base32768::Encode(Prefix);
 			}
 			return m_CachedPrefix;
 		}
 
-		void CreateNewRoom()
+		bool GenerateX25519KeyPair()
 		{
-			QuitRoom();
-			m_RequestObjectId = -1;
-			CryptoUtils::GenerateXChaCha20Poly1305Key(m_AESKey);
+			m_X25519PrivateKey.clear();
+			m_X25519PublicKey.clear();
+			return CryptoUtils::GenerateX25519KeyPair(m_X25519PrivateKey, m_X25519PublicKey);
 		}
 
 		void QuitRoom()
 		{
-			m_AESKey.clear();
+			m_XChaCha20Poly1305Key.clear();
 			m_JoinRequests.clear();
 			m_CachedPrefix.clear();
+			m_RequestObjectId = -1;
+		}
+
+		void SetRoomKey(const std::vector<uint8_t> &Key)
+		{
+			QuitRoom();
+			m_XChaCha20Poly1305Key = Key;
+		}
+
+		void CreateNewRoom()
+		{
+			QuitRoom();
+			CryptoUtils::GenerateXChaCha20Poly1305Key(m_XChaCha20Poly1305Key);
 		}
 
 		std::string EncodeMessage(const std::string &Message)
@@ -230,7 +236,7 @@ class CChat : public CComponent
 			}
 
 			std::vector<uint8_t> CipherRaw;
-			if(!CryptoUtils::XChaCha20Poly1305Encrypt(m_AESKey,
+			if(!CryptoUtils::XChaCha20Poly1305Encrypt(m_XChaCha20Poly1305Key,
 				   std::vector<uint8_t>(Truncated.begin(), Truncated.end()),
 				   CipherRaw))
 				return "{eEncode failed";
@@ -249,7 +255,7 @@ class CChat : public CComponent
 			if(Ciphertext.empty())
 				return "{eEmpty message";
 			std::vector<uint8_t> PlainRaw;
-			if(!CryptoUtils::XChaCha20Poly1305Decrypt(m_AESKey, Ciphertext, PlainRaw))
+			if(!CryptoUtils::XChaCha20Poly1305Decrypt(m_XChaCha20Poly1305Key, Ciphertext, PlainRaw))
 				return "{eDecode failed";
 			return std::string(PlainRaw.begin(), PlainRaw.end());
 		}
@@ -282,7 +288,7 @@ class CChat : public CComponent
 
 			const std::vector<uint8_t> &PeerPub = It->second;
 			std::vector<uint8_t> Cipher;
-			if(!CryptoUtils::X25519Encrypt(PeerPub, m_AESKey, Cipher))
+			if(!CryptoUtils::X25519Encrypt(PeerPub, m_XChaCha20Poly1305Key, Cipher))
 				return "{eEncrypt failed";
 
 			std::string EncodedCipher = Base32768::Encode(Cipher);
