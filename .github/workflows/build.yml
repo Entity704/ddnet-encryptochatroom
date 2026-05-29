@@ -36,13 +36,13 @@ jobs:
           package-file: "*-macos.dmg"
         - name: windows-latest
           os: windows-latest
-          cmake-args: -A x64 -DEXCEPTION_HANDLING=ON -DVULKAN=ON
+          cmake-args: -A x64 -DEXCEPTION_HANDLING=ON -DVULKAN=ON -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-mingw-static
           cmake-init-env: CXXFLAGS=/WX LDFLAGS=/WX
           package-file: "*-win64.zip"
           executable-suffix: .exe
         - name: windows-latest-mingw
           os: windows-latest
-          cmake-args: -G Ninja -DCMAKE_SYSTEM_NAME=Windows -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -DEXCEPTION_HANDLING=ON -DCMAKE_RC_COMPILER=windres -DCMAKE_AR=ar -DVULKAN=ON
+          cmake-args: -G Ninja -DCMAKE_SYSTEM_NAME=Windows -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -DEXCEPTION_HANDLING=ON -DCMAKE_RC_COMPILER=windres -DCMAKE_AR=ar -DVULKAN=ON -DOPENSSL_ROOT_DIR=C:/msys64/mingw64
           cmake-init-env: CXXFLAGS=-Werror LDFLAGS=-Werror
           package-file: "*-win64.zip"
           executable-suffix: .exe
@@ -109,6 +109,11 @@ jobs:
         echo /Library/Frameworks/Python.framework/Versions/3.12/bin >> $GITHUB_PATH
         sudo rm -rf /Library/Developer/CommandLineTools
 
+    - name: Prepare Windows MSVC
+      if: contains(matrix.os, 'windows') && !contains(matrix.name, 'mingw')
+      run: |
+        vcpkg install openssl:x64-windows
+
     - name: Prepare Windows MinGW
       if: contains(matrix.os, 'windows') && contains(matrix.name, 'mingw')
       run: |
@@ -116,6 +121,7 @@ jobs:
         rustup target add x86_64-pc-windows-gnu
         rustup default stable-x86_64-pc-windows-gnu
         rustup set default-host x86_64-pc-windows-gnu
+        pacman -S mingw-w64-x86_64-openssl
 
     - name: Install Vulkan SDK
       uses: humbletim/install-vulkan-sdk@v1.2
