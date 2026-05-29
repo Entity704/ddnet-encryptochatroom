@@ -115,6 +115,7 @@ jobs:
         vcpkg install openssl:x64-windows
 
     - name: Setup MSYS2
+      if: contains(matrix.os, 'windows') && contains(matrix.name, 'mingw')
       uses: msys2/setup-msys2@v2
       with:
         update: true
