@@ -240,16 +240,16 @@ class CChat : public CComponent
 			return Result;
 		}
 
-		std::string DecodeMessage(const std::string &RawChat)
+		std::string DecodeMessage(const std::string &RawChat) const
 		{
 			if(!IsValidRoom())
 				return "{eInvalid room";
 			std::string Encoded = RawChat.substr(11);
-			std::vector<uint8_t> Ciphertext = Base32768::Decode(Encoded);
-			if(Ciphertext.empty())
+			std::vector<uint8_t> CipherText = Base32768::Decode(Encoded);
+			if(CipherText.empty())
 				return "{eEmpty message";
 			std::vector<uint8_t> PlainRaw;
-			if(!CryptoUtils::AES_Decrypt(m_AESKey, Ciphertext, PlainRaw))
+			if(!CryptoUtils::AES_Decrypt(m_AESKey, CipherText, PlainRaw))
 				return "{eDecode failed";
 			return std::string(PlainRaw.begin(), PlainRaw.end());
 		}

@@ -313,9 +313,9 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 			{
 				if(InputStr.length() >= 5)
 				{
-					std::string param = InputStr.substr(4);
+					std::string Param = InputStr.substr(4);
 					int TargetID;
-					if(std::stringstream(param) >> TargetID && TargetID >= 0 && TargetID < MAX_CLIENTS)
+					if(std::stringstream(Param) >> TargetID && TargetID >= 0 && TargetID < MAX_CLIENTS)
 					{
 						if(m_PrivChatRoom.m_X25519PublicKey.empty())
 						{
@@ -325,33 +325,33 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 							}
 							else
 							{
-								std::string request = m_PrivChatRoom.EncodeJoinRequest(TargetID);
-								if(request.find("{e") == 0 || request.empty())
+								std::string Request = m_PrivChatRoom.EncodeJoinRequest(TargetID);
+								if(Request.find("{e") == 0 || Request.empty())
 								{
-									Echo(request.empty() ? "Missing public key" : request.substr(2).c_str());
+									Echo(Request.empty() ? "Missing public key" : Request.substr(2).c_str());
 								}
 								else
 								{
-									SendChatQueued(request.c_str());
-									char buf[128];
-									str_format(buf, sizeof(buf), "Join request sent to client %d", TargetID);
-									Echo(buf);
+									SendChatQueued(Request.c_str());
+									char Buf[128];
+									str_format(Buf, sizeof(Buf), "Join request sent to client %d", TargetID);
+									Echo(Buf);
 								}
 							}
 						}
 						else
 						{
-							std::string request = m_PrivChatRoom.EncodeJoinRequest(TargetID);
-							if(request.find("{e") == 0 || request.empty())
+							std::string Request = m_PrivChatRoom.EncodeJoinRequest(TargetID);
+							if(Request.find("{e") == 0 || Request.empty())
 							{
-								Echo(request.empty() ? "Missing public key" : request.substr(2).c_str());
+								Echo(Request.empty() ? "Missing public key" : Request.substr(2).c_str());
 							}
 							else
 							{
-								SendChatQueued(request.c_str());
-								char buf[128];
-								str_format(buf, sizeof(buf), "Join request sent to client %d", TargetID);
-								Echo(buf);
+								SendChatQueued(Request.c_str());
+								char Buf[128];
+								str_format(Buf, sizeof(Buf), "Join request sent to client %d", TargetID);
+								Echo(Buf);
 							}
 						}
 					}
@@ -368,35 +368,35 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 			else if(Cmd == "cjr")
 			{
 				m_PrivChatRoom.m_RequestObjectID = -1;
-				char buf[64];
-				str_format(buf, sizeof(buf), "{c%d", GameClient()->m_Snap.m_LocalClientId);
-				SendChatQueued(buf);
+				char Buf[64];
+				str_format(Buf, sizeof(Buf), "{c%d", GameClient()->m_Snap.m_LocalClientId);
+				SendChatQueued(Buf);
 				Echo("Join request canceled");
 			}
 			else if(Cmd == "accept")
 			{
 				if(InputStr.length() >= 10)
 				{
-					std::string param = InputStr.substr(9);
+					std::string Param = InputStr.substr(9);
 					int TargetID;
-					if(std::stringstream(param) >> TargetID && TargetID >= 0 && TargetID < MAX_CLIENTS)
+					if(std::stringstream(Param) >> TargetID && TargetID >= 0 && TargetID < MAX_CLIENTS)
 					{
-						std::string keyMsg = m_PrivChatRoom.EncodeKeyDistributionMessage(TargetID);
-						if(keyMsg == "{eInvalid room" || keyMsg == "{eNo such request" ||
-							keyMsg == "{eEncrypt failed")
+						std::string KeyMsg = m_PrivChatRoom.EncodeKeyDistributionMessage(TargetID);
+						if(KeyMsg == "{eInvalid room" || KeyMsg == "{eNo such request" ||
+							KeyMsg == "{eEncrypt failed")
 						{
-							Echo(("Cannot approve: " + keyMsg.substr(2)).c_str());
+							Echo(("Cannot approve: " + KeyMsg.substr(2)).c_str());
 						}
-						else if(keyMsg.empty())
+						else if(KeyMsg.empty())
 						{
 							Echo("Unknown error");
 						}
 						else
 						{
-							SendChatQueued(keyMsg.c_str());
-							char buf[128];
-							str_format(buf, sizeof(buf), "Approved client %d and sent room key", TargetID);
-							Echo(buf);
+							SendChatQueued(KeyMsg.c_str());
+							char Buf[128];
+							str_format(Buf, sizeof(Buf), "Approved client %d and sent room key", TargetID);
+							Echo(Buf);
 						}
 					}
 					else
@@ -417,13 +417,13 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 					int TargetID;
 					if(std::stringstream(param) >> TargetID && TargetID >= 0 && TargetID < MAX_CLIENTS)
 					{
-						auto it = m_PrivChatRoom.m_JoinRequests.find(TargetID);
-						if(it != m_PrivChatRoom.m_JoinRequests.end())
+						auto It = m_PrivChatRoom.m_JoinRequests.find(TargetID);
+						if(It != m_PrivChatRoom.m_JoinRequests.end())
 						{
-							m_PrivChatRoom.m_JoinRequests.erase(it);
-							char buf[128];
-							str_format(buf, sizeof(buf), "Declined join request from client %d", TargetID);
-							Echo(buf);
+							m_PrivChatRoom.m_JoinRequests.erase(It);
+							char Buf[128];
+							str_format(Buf, sizeof(Buf), "Declined join request from client %d", TargetID);
+							Echo(Buf);
 						}
 						else
 						{
@@ -766,14 +766,14 @@ void CChat::OnMessage(int MsgType, void *pRawMsg)
 			int SenderID = pMsg->m_ClientId;
 			int MyID = GameClient()->m_Snap.m_LocalClientId;
 
-			auto SafeStoi = [](const std::string &s, int &out) -> bool {
+			auto SafeStoi = [](const std::string &s, int &Out) -> bool {
 				if(s.empty())
 					return false;
-				char *endptr;
-				long val = strtol(s.c_str(), &endptr, 10);
-				if(*endptr != '\0' || val < 0 || val > MAX_CLIENTS)
+				char *Endptr;
+				long Val = strtol(s.c_str(), &Endptr, 10);
+				if(*Endptr != '\0' || Val < 0 || Val > MAX_CLIENTS)
 					return false;
-				out = static_cast<int>(val);
+				Out = static_cast<int>(Val);
 				return true;
 			};
 
@@ -797,21 +797,21 @@ void CChat::OnMessage(int MsgType, void *pRawMsg)
 			{
 				if(m_PrivChatRoom.IsValidRoom())
 				{
-					size_t pos = 2;
-					std::string idStr;
-					while(pos < Msg.size() && isdigit(static_cast<unsigned char>(Msg[pos])))
-						idStr += Msg[pos++];
-					int targetID = -1;
-					if(SafeStoi(idStr, targetID) && targetID == MyID)
+					size_t Pos = 2;
+					std::string IdStr;
+					while(Pos < Msg.size() && isdigit(static_cast<unsigned char>(Msg[Pos])))
+						IdStr += Msg[Pos++];
+					int TargetID = -1;
+					if(SafeStoi(IdStr, TargetID) && TargetID == MyID)
 					{
-						std::string encodedPub = Msg.substr(pos);
-						std::vector<uint8_t> pubkey = Base32768::Decode(encodedPub);
-						if(pubkey.size() == 32)
+						std::string EncodedPub = Msg.substr(Pos);
+						std::vector<uint8_t> Pubkey = Base32768::Decode(EncodedPub);
+						if(Pubkey.size() == 32)
 						{
-							m_PrivChatRoom.m_JoinRequests[SenderID] = pubkey;
-							char buf[256];
-							str_format(buf, sizeof(buf), "Received join request from client %d: %s. Use ]approve %d or ]decline %d", SenderID, CurrentLine.m_aName, SenderID, SenderID);
-							Echo(buf);
+							m_PrivChatRoom.m_JoinRequests[SenderID] = Pubkey;
+							char Buf[256];
+							str_format(Buf, sizeof(Buf), "Received join request from client %d: %s. Use ]approve %d or ]decline %d", SenderID, CurrentLine.m_aName, SenderID, SenderID);
+							Echo(Buf);
 						}
 						else
 						{
@@ -822,18 +822,18 @@ void CChat::OnMessage(int MsgType, void *pRawMsg)
 			}
 			else if(Msg.find('k') == 1)
 			{
-				size_t pos = 2;
-				std::string idStr;
-				while(pos < Msg.size() && isdigit(static_cast<unsigned char>(Msg[pos])))
-					idStr += Msg[pos++];
-				int targetID = -1;
-				if(SafeStoi(idStr, targetID) && targetID == MyID)
+				size_t Pos = 2;
+				std::string IdStr;
+				while(Pos < Msg.size() && isdigit(static_cast<unsigned char>(Msg[Pos])))
+					IdStr += Msg[Pos++];
+				int TargetID = -1;
+				if(SafeStoi(IdStr, TargetID) && TargetID == MyID)
 				{
-					std::string encodedCipher = Msg.substr(pos);
-					if(!encodedCipher.empty())
+					std::string EncodedCipher = Msg.substr(Pos);
+					if(!EncodedCipher.empty())
 					{
-						std::vector<uint8_t> Ciphertext = Base32768::Decode(encodedCipher);
-						if(!Ciphertext.empty())
+						std::vector<uint8_t> CipherText = Base32768::Decode(EncodedCipher);
+						if(!CipherText.empty())
 						{
 							if(!m_PrivChatRoom.m_X25519PrivateKey.empty())
 							{
@@ -844,7 +844,7 @@ void CChat::OnMessage(int MsgType, void *pRawMsg)
 								else
 								{
 									std::vector<uint8_t> AESKey;
-									if(CryptoUtils::X25519_Decrypt(m_PrivChatRoom.m_X25519PrivateKey, Ciphertext, AESKey))
+									if(CryptoUtils::X25519_Decrypt(m_PrivChatRoom.m_X25519PrivateKey, CipherText, AESKey))
 									{
 										m_PrivChatRoom.m_AESKey = AESKey;
 										m_PrivChatRoom.m_JoinRequests.clear();
@@ -871,20 +871,20 @@ void CChat::OnMessage(int MsgType, void *pRawMsg)
 			}
 			else if(Msg.find('c') == 1)
 			{
-				size_t pos = 2;
-				std::string idStr;
-				while(pos < Msg.size() && isdigit(static_cast<unsigned char>(Msg[pos])))
-					idStr += Msg[pos++];
-				int cancelID = -1;
-				if(SafeStoi(idStr, cancelID) && cancelID == MyID)
+				size_t Pos = 2;
+				std::string IdStr;
+				while(Pos < Msg.size() && isdigit(static_cast<unsigned char>(Msg[Pos])))
+					IdStr += Msg[Pos++];
+				int CancelID = -1;
+				if(SafeStoi(IdStr, CancelID) && CancelID == MyID)
 				{
-					auto it = m_PrivChatRoom.m_JoinRequests.find(SenderID);
-					if(it != m_PrivChatRoom.m_JoinRequests.end())
+					auto It = m_PrivChatRoom.m_JoinRequests.find(SenderID);
+					if(It != m_PrivChatRoom.m_JoinRequests.end())
 					{
-						m_PrivChatRoom.m_JoinRequests.erase(it);
-						char buf[256];
-						str_format(buf, sizeof(buf), "%d: %s canceled the join request", SenderID, CurrentLine.m_aName);
-						Echo(buf);
+						m_PrivChatRoom.m_JoinRequests.erase(It);
+						char Buf[256];
+						str_format(Buf, sizeof(Buf), "%d: %s canceled the join request", SenderID, CurrentLine.m_aName);
+						Echo(Buf);
 					}
 				}
 			}
